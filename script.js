@@ -232,6 +232,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 <button id="admin-logout-btn">Çıkış Yap</button>
                 <button id="admin-refresh-guestbook">Guestbook Mesajlarını Yenile</button>
                 <div id="admin-guestbook-list">Yükleniyor...</div>
+                <div style="margin-top:24px;">
+                  <h4>Chatbot</h4>
+                  <input type="text" id="chatbot-question" placeholder="Sorunuzu yazın..." style="width:70%;">
+                  <button id="chatbot-send">Sor</button>
+                  <div id="chatbot-answer" style="margin-top:10px;color:var(--text-color);"></div>
+                </div>
             </div>
         `;
         consoleOutput.appendChild(panel);
@@ -244,6 +250,23 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         document.getElementById('admin-refresh-guestbook').onclick = loadAdminGuestbookList;
         loadAdminGuestbookList();
+        // Chatbot event handler
+        document.getElementById('chatbot-send').onclick = async () => {
+          const soru = document.getElementById('chatbot-question').value;
+          const cevapDiv = document.getElementById('chatbot-answer');
+          cevapDiv.textContent = "Yanıt bekleniyor...";
+          try {
+            const resp = await fetch('http://localhost:3000/api/chatbot', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ soru })
+            });
+            const data = await resp.json();
+            cevapDiv.textContent = data.cevap;
+          } catch (e) {
+            cevapDiv.textContent = "Bağlantı hatası!";
+          }
+        };
     }
 
     async function loadAdminGuestbookList() {
@@ -388,6 +411,24 @@ document.addEventListener('DOMContentLoaded', () => {
             consoleOutput.appendChild(output);
             adminLoginPrompt();
             return;
+        } else if (cmd === 'chatbot') {
+          const msg = args.join(' ');
+          if (!msg) {
+            output.innerHTML = '<p>Lütfen bir soru yazın. Örnek: chatbot Merhaba</p>';
+            consoleOutput.appendChild(output);
+            return;
+          }
+          output.innerHTML = '<p>Yanıt bekleniyor...</p>';
+          consoleOutput.appendChild(output);
+          fetch('http://localhost:3000/api/chatbot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ soru: msg })
+          })
+            .then(r => r.json())
+            .then(data => { output.innerHTML = `<p>${data.cevap}</p>`; })
+            .catch(() => { output.innerHTML = '<p>Bağlantı hatası!</p>'; });
+          return;
         } else if (command.trim() !== '') {
             output.innerHTML = `<p>'${command}' is not recognized as an internal or external command.</p>`;
         }
