@@ -12,4 +12,5 @@ app.post('/api/chatbot', (req, res) => {
   res.json({ cevap: cevapObj ? cevapObj.cevap : "Üzgünüm, bu soruya cevap veremiyorum." });
 });
 
-app.listen(3000, () => console.log('Chatbot backend 3000 portunda!'));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Chatbot çalışıyor! Port: ${PORT}`));
