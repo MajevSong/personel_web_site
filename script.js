@@ -228,21 +228,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const panel = document.createElement('div');
         panel.id = 'admin-panel';
         panel.innerHTML = `
-            <div style="border:2px solid var(--border-color,#0f0);padding:16px;margin:16px 0;background:rgba(0,255,0,0.05);border-radius:12px;box-shadow:0 4px 24px 0 rgba(0,0,0,0.15);max-width:420px;">
-                <h3 style='margin-top:0;'>Admin Panel</h3>
-                <button id="admin-logout-btn">Çıkış Yap</button>
-                <button id="admin-refresh-guestbook">Guestbook Mesajlarını Yenile</button>
-                <div id="admin-guestbook-list">Yükleniyor...</div>
-                <div id="chatbot-panel" style="margin-top:24px;padding:18px 12px 12px 12px;background:rgba(0,0,0,0.08);border-radius:10px;box-shadow:0 2px 8px 0 rgba(0,0,0,0.08);">
-                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                    <h4 style="margin:0;">🤖 Chatbot</h4>
-                    <button id="chatbot-close" style="background:#e74c3c;color:#fff;border:none;border-radius:4px;padding:2px 10px;cursor:pointer;font-size:0.95em;">Kapat</button>
+            <div style="border:2px solid var(--border-color,#0f0);padding:16px;margin:16px 0;background:rgba(0,255,0,0.05);border-radius:12px;box-shadow:0 4px 24px 0 rgba(0,0,0,0.15);max-width:350px;">
+                <h3 style='margin-top:0;font-size:1.15em;'>Admin Panel</h3>
+                <button id="admin-logout-btn" style="margin-bottom:8px;">Çıkış Yap</button>
+                <button id="admin-refresh-guestbook" style="margin-bottom:8px;">Guestbook Mesajlarını Yenile</button>
+                <div id="admin-guestbook-list" style="margin-bottom:10px;">Yükleniyor...</div>
+                <div id="chatbot-panel" style="margin-top:12px;padding:12px 8px 8px 8px;background:rgba(0,0,0,0.08);border-radius:8px;box-shadow:0 2px 8px 0 rgba(0,0,0,0.08);">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                    <h4 style="margin:0;font-size:1em;">🤖 Chatbot</h4>
+                    <button id="chatbot-close" style="background:#e74c3c;color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:0.9em;">Kapat</button>
                   </div>
-                  <div style="display:flex;gap:8px;align-items:center;">
-                    <input type="text" id="chatbot-question" placeholder="Sorunuzu yazın..." style="flex:1;padding:10px 12px;border:1.5px solid var(--border-color,#0f0);border-radius:6px;font-size:1em;background:#181818;color:var(--text-color);outline:none;transition:border 0.2s;">
-                    <button id="chatbot-send" style="padding:10px 18px;background:var(--header-color,#0f0);color:#222;border:none;border-radius:6px;font-weight:bold;cursor:pointer;transition:background 0.2s;">Sor</button>
+                  <div style="display:flex;gap:6px;align-items:center;">
+                    <input type="text" id="chatbot-question" placeholder="Sorunuzu yazın..." style="flex:1;padding:6px 8px;border:1.2px solid var(--border-color,#0f0);border-radius:5px;font-size:0.97em;background:#181818;color:var(--text-color);outline:none;transition:border 0.2s;min-width:0;">
+                    <button id="chatbot-send" style="padding:6px 12px;background:var(--header-color,#0f0);color:#222;border:none;border-radius:5px;font-weight:bold;cursor:pointer;font-size:0.97em;transition:background 0.2s;">Sor</button>
                   </div>
-                  <div id="chatbot-answer" style="margin-top:14px;color:var(--text-color);min-height:24px;"></div>
+                  <div id="chatbot-answer" style="margin-top:10px;color:var(--text-color);min-height:20px;font-size:0.97em;"></div>
                 </div>
             </div>
         `;
@@ -286,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
           chatbotInput.disabled = false;
           chatbotSend.disabled = false;
           chatbotInput.value = '';
-          chatbotInput.focus();
+          setTimeout(() => chatbotInput.focus(), 50);
         };
         chatbotInput.addEventListener('keydown', function(e) {
           if (e.key === 'Enter') chatbotSend.click();
@@ -453,7 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
             body: JSON.stringify({ soru: msg })
           })
             .then(r => r.json())
-            .then(data => { output.innerHTML = `<p>${data.cevap}</p>`; })
+            .then(data => { output.innerHTML = `<p>${data.cevap}</p>`; setTimeout(() => document.getElementById('terminal-input')?.focus(), 50); })
             .catch(() => { output.innerHTML = '<p>Bağlantı hatası!</p>'; });
           return;
         } else if (command.trim() !== '') {
