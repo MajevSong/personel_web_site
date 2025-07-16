@@ -224,19 +224,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showAdminPanel() {
+        if (document.getElementById('admin-panel')) return; // Panel zaten açıksa tekrar açma
         const panel = document.createElement('div');
         panel.id = 'admin-panel';
         panel.innerHTML = `
-            <div style="border:2px solid var(--border-color,#0f0);padding:16px;margin:16px 0;background:rgba(0,255,0,0.05);">
-                <h3>Admin Panel</h3>
+            <div style="border:2px solid var(--border-color,#0f0);padding:16px;margin:16px 0;background:rgba(0,255,0,0.05);border-radius:12px;box-shadow:0 4px 24px 0 rgba(0,0,0,0.15);max-width:420px;">
+                <h3 style='margin-top:0;'>Admin Panel</h3>
                 <button id="admin-logout-btn">Çıkış Yap</button>
                 <button id="admin-refresh-guestbook">Guestbook Mesajlarını Yenile</button>
                 <div id="admin-guestbook-list">Yükleniyor...</div>
-                <div style="margin-top:24px;">
-                  <h4>Chatbot</h4>
-                  <input type="text" id="chatbot-question" placeholder="Sorunuzu yazın..." style="width:70%;">
-                  <button id="chatbot-send">Sor</button>
-                  <div id="chatbot-answer" style="margin-top:10px;color:var(--text-color);"></div>
+                <div id="chatbot-panel" style="margin-top:24px;padding:18px 12px 12px 12px;background:rgba(0,0,0,0.08);border-radius:10px;box-shadow:0 2px 8px 0 rgba(0,0,0,0.08);">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                    <h4 style="margin:0;">🤖 Chatbot</h4>
+                    <button id="chatbot-close" style="background:#e74c3c;color:#fff;border:none;border-radius:4px;padding:2px 10px;cursor:pointer;font-size:0.95em;">Kapat</button>
+                  </div>
+                  <div style="display:flex;gap:8px;align-items:center;">
+                    <input type="text" id="chatbot-question" placeholder="Sorunuzu yazın..." style="flex:1;padding:10px 12px;border:1.5px solid var(--border-color,#0f0);border-radius:6px;font-size:1em;background:#181818;color:var(--text-color);outline:none;transition:border 0.2s;">
+                    <button id="chatbot-send" style="padding:10px 18px;background:var(--header-color,#0f0);color:#222;border:none;border-radius:6px;font-weight:bold;cursor:pointer;transition:background 0.2s;">Sor</button>
+                  </div>
+                  <div id="chatbot-answer" style="margin-top:14px;color:var(--text-color);min-height:24px;"></div>
                 </div>
             </div>
         `;
@@ -251,21 +257,42 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('admin-refresh-guestbook').onclick = loadAdminGuestbookList;
         loadAdminGuestbookList();
         // Chatbot event handler
-        document.getElementById('chatbot-send').onclick = async () => {
-          const soru = document.getElementById('chatbot-question').value;
-          const cevapDiv = document.getElementById('chatbot-answer');
-          cevapDiv.textContent = "Yanıt bekleniyor...";
+        const chatbotInput = document.getElementById('chatbot-question');
+        const chatbotSend = document.getElementById('chatbot-send');
+        const chatbotAnswer = document.getElementById('chatbot-answer');
+        const chatbotClose = document.getElementById('chatbot-close');
+        chatbotInput.focus();
+        chatbotSend.onclick = async () => {
+          const soru = chatbotInput.value.trim();
+          if (!soru) {
+            chatbotAnswer.textContent = "Lütfen bir soru yazın.";
+            chatbotInput.focus();
+            return;
+          }
+          chatbotAnswer.textContent = "Yanıt bekleniyor...";
+          chatbotInput.disabled = true;
+          chatbotSend.disabled = true;
           try {
-            const resp = await fetch('http://localhost:3000/api/chatbot', {
+            const resp = await fetch('https://personel-web-site.onrender.com/api/chatbot', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ soru })
             });
             const data = await resp.json();
-            cevapDiv.textContent = data.cevap;
+            chatbotAnswer.textContent = data.cevap;
           } catch (e) {
-            cevapDiv.textContent = "Bağlantı hatası!";
+            chatbotAnswer.textContent = "Bağlantı hatası!";
           }
+          chatbotInput.disabled = false;
+          chatbotSend.disabled = false;
+          chatbotInput.value = '';
+          chatbotInput.focus();
+        };
+        chatbotInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') chatbotSend.click();
+        });
+        chatbotClose.onclick = () => {
+          document.getElementById('chatbot-panel').remove();
         };
     }
 
@@ -420,7 +447,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           output.innerHTML = '<p>Yanıt bekleniyor...</p>';
           consoleOutput.appendChild(output);
-          fetch('http://localhost:3000/api/chatbot', {
+          fetch('https://personel-web-site.onrender.com/api/chatbot', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ soru: msg })
