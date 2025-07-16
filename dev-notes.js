@@ -1,0 +1,1 @@
+// Gelecekte geliştirilecek olan "dev notes" özelliği için ayrılmıştır.

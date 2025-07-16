@@ -1,0 +1,7 @@
+feat: Add base structure, theme switcher, and retro styling
+
+- Implemented a responsive HTML structure for About Me and Projects sections.
+- Created a flexible theme switcher with Matrix, DOS, and C64 themes using CSS variables and localStorage for persistence.
+- Added a global CRT monitor effect for a stronger retro aesthetic.
+- Structured project cards to include descriptions, technologies, and links.
+- Added developer notes (dev-notes.md) to guide future feature development.
