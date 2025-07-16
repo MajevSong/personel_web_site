@@ -1,7 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
+const ChatbotAI = require('./chatbotAI');
 require('dotenv').config();
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -18,6 +20,16 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);
+const chatbotAI = new ChatbotAI(supabaseUrl, supabaseKey);
+
+// AI modelini başlat
+let isModelReady = false;
+chatbotAI.loadDataAndTrain().then(success => {
+  isModelReady = success;
+  console.log('AI Model durumu:', isModelReady ? 'Hazır' : 'Hazır değil');
+}).catch(error => {
+  console.error('AI Model başlatma hatası:', error);
+});
 
 app.post('/api/chatbot', async (req, res) => {
   try {
@@ -28,43 +40,34 @@ app.post('/api/chatbot', async (req, res) => {
       return res.status(400).json({ cevap: 'Soru boş olamaz!' });
     }
 
-    // guestbook tablosundan sadece message kolonunu çek
-    const { data, error } = await supabase
-      .from('guestbook')
-      .select('message');
-    
-    if (error) {
-      console.error('Supabase hatası:', error);
-      return res.status(500).json({ cevap: `Veritabanı hatası: ${error.message}` });
+    if (!isModelReady) {
+      return res.status(503).json({ 
+        cevap: 'AI modeli henüz hazır değil, lütfen birkaç saniye bekleyin...',
+        confidence: 0
+      });
     }
 
-    console.log('Çekilen veri sayısı:', data ? data.length : 0);
+    // AI ile cevap al
+    const response = await chatbotAI.getResponse(soru);
+    console.log('AI Cevabı:', response.answer, 'Güven:', response.confidence);
     
-    // Basit cevap sistemi
-    const soruLower = soru.toLowerCase();
-    let cevap = 'Üzgünüm, bu soruya cevap veremiyorum.';
-    
-    if (soruLower.includes('merhaba') || soruLower.includes('selam')) {
-      cevap = 'Merhaba! Size nasıl yardımcı olabilirim?';
-    } else if (soruLower.includes('nasılsın')) {
-      cevap = 'İyiyim, teşekkür ederim! Siz nasılsınız?';
-    } else if (soruLower.includes('python') || soruLower.includes('programlama')) {
-      cevap = 'Python harika bir programlama dilidir! Öğrenmek ister misiniz?';
-    } else if (soruLower.includes('teşekkür')) {
-      cevap = 'Rica ederim! Başka bir sorunuz var mı?';
-    } else if (soruLower.includes('hava') || soruLower.includes('hava durumu')) {
-      cevap = 'Benim için hava her zaman kod gibi güzel! 😊';
-    } else if (soruLower.includes('adın') || soruLower.includes('kimsin')) {
-      cevap = 'Ben MajevSong\'un chatbot\'uyum! Size yardımcı olmaya çalışıyorum.';
-    }
-    
-    console.log('Cevap:', cevap);
-    res.json({ cevap });
+    res.json({ 
+      cevap: response.answer,
+      confidence: response.confidence
+    });
   } catch (err) {
     console.error('Genel hata:', err);
     res.status(500).json({ cevap: `Sunucu hatası: ${err.message}` });
   }
 });
 
+// Model durumunu kontrol et
+app.get('/api/chatbot/status', (req, res) => {
+  res.json({ 
+    ready: isModelReady,
+    message: isModelReady ? 'AI Model hazır' : 'AI Model eğitiliyor...'
+  });
+});
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Chatbot çalışıyor! Port: ${PORT}`));
+app.listen(PORT, () => console.log(`AI Chatbot çalışıyor! Port: ${PORT}`));
