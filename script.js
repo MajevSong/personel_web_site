@@ -293,6 +293,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         chatbotClose.onclick = () => {
           document.getElementById('chatbot-panel').remove();
+          // Chatbot kapatıldığında terminal prompt'u tekrar göster
+          const promptElement = document.querySelector('.prompt');
+          if (promptElement) {
+            promptElement.style.visibility = 'visible';
+            document.getElementById('terminal-input').focus();
+          }
         };
     }
 

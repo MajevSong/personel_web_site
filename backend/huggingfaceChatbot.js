@@ -1,5 +1,4 @@
 const { HfInference } = require('@huggingface/inference');
-
 class HuggingFaceChatbot {
   constructor(apiKey) {
     this.hf = new HfInference(apiKey);
@@ -20,13 +19,14 @@ class HuggingFaceChatbot {
       // Basit prompt engineering
       const prompt = `${this.createContext()}\n\nKullanıcı: ${question}\nSen:`;
 
+      // Daha uygun model kullan
       const response = await this.hf.textGeneration({
-        model: 'microsoft/DialoGPT-medium', // Alternatif: 'gpt2' veya 'distilgpt2'
+        model: 'gpt2',
         inputs: prompt,
         parameters: {
-          max_length: 150,
-          temperature: 0.7,
-          top_p: 0.9,
+          max_length: 100,
+          temperature: 0.8,
+          top_p:0.9,
           do_sample: true,
           return_full_text: false
         }
@@ -46,8 +46,8 @@ class HuggingFaceChatbot {
       
       return {
         answer: answer,
-        confidence: 0.8, // Hugging Face için sabit güven skoru
-        model: 'Hugging Face'
+        confidence: 0.8,
+        model: 'Hugging Face GPT-2'
       };
 
     } catch (error) {
@@ -56,7 +56,7 @@ class HuggingFaceChatbot {
       // Hata durumunda sadece hata mesajı döndür
       return {
         answer: `Üzgünüm, AI modeli şu anda kullanılamıyor. Hata: ${error.message}`,
-        confidence: 0.0,
+        confidence: 0,
         model: 'Error'
       };
     }
