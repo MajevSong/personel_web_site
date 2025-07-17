@@ -25,6 +25,7 @@ app.post('/api/chatbot', async (req, res) => {
     if (!soru) {
       return res.status(400).json({ cevap: 'Soru alanı eksik veya body yanlış formatta gönderildi! (JSON ve {"soru": "..."} şeklinde olmalı)' });
     }
+    let cevap = null;
     // Önce tam eşleşme ara
     let { data, error } = await supabase
       .from('chatbot_knowledge')
@@ -33,7 +34,9 @@ app.post('/api/chatbot', async (req, res) => {
       .maybeSingle();
     if (error) throw error;
     if (data && data.answer) {
-      return res.json({ cevap: data.answer });
+      cevap = data.answer;
+      await supabase.from('chatbot_logs').insert([{ question: soru, answer: cevap }]);
+      return res.json({ cevap });
     }
     // Tam eşleşme yoksa, ILIKE ile benzer arama yap
     let { data: likeData, error: likeError } = await supabase
@@ -43,7 +46,9 @@ app.post('/api/chatbot', async (req, res) => {
       .limit(1);
     if (likeError) throw likeError;
     if (likeData && likeData.length) {
-      return res.json({ cevap: likeData[0].answer });
+      cevap = likeData[0].answer;
+      await supabase.from('chatbot_logs').insert([{ question: soru, answer: cevap }]);
+      return res.json({ cevap });
     }
     // Levenshtein mesafesi ile en yakın soruyu bul
     let { data: allData, error: allError } = await supabase
@@ -60,13 +65,16 @@ app.post('/api/chatbot', async (req, res) => {
           bestMatch = item;
         }
       });
-      // Eşik değeri: çok alakasızsa cevap verme
       if (bestMatch && minDist <= Math.max(5, Math.floor(soru.length * 0.4))) {
-        return res.json({ cevap: bestMatch.answer });
+        cevap = bestMatch.answer;
+        await supabase.from('chatbot_logs').insert([{ question: soru, answer: cevap }]);
+        return res.json({ cevap });
       }
     }
     // Hiçbir şey bulunamazsa
-    return res.json({ cevap: 'Üzgünüm, bu soruya henüz bir cevabım yok.' });
+    cevap = 'Üzgünüm, bu soruya henüz bir cevabım yok.';
+    await supabase.from('chatbot_logs').insert([{ question: soru, answer: cevap }]);
+    return res.json({ cevap });
   } catch (err) {
     console.error('Genel hata:', err);
     res.status(500).json({ cevap: `Sunucu hatası: ${err.message}` });
