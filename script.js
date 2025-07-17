@@ -278,18 +278,13 @@ document.addEventListener('DOMContentLoaded', () => {
           chatbotInput.disabled = true;
           chatbotSend.disabled = true;
           try {
-            const response = await this.hf.textGeneration({
-              model: 'cahya/gpt2-small-turkish',
-              inputs: prompt,
-              parameters: {
-                max_length: 100,
-                temperature: 0.8,
-                top_p: 0.9,
-                do_sample: true,
-                return_full_text: false
-              }
+            const response = await fetch('https://personel-web-site.onrender.com/api/chatbot', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ soru })
             });
-            chatbotAnswer.textContent = response.text;
+            const data = await response.json();
+            chatbotAnswer.textContent = data.cevap;
           } catch (e) {
             chatbotAnswer.textContent = "Bağlantı hatası!";
           }
