@@ -1,35 +1,23 @@
 const express = require('express');
 const cors = require('cors');
-const { createClient } = require('@supabase/supabase-js');
-const ChatbotAI = require('./chatbotAI');
+const HuggingFaceChatbot = require('./huggingfaceChatbot');
 require('dotenv').config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
+const hfApiKey = process.env.HUGGINGFACE_API_KEY;
 
-console.log('Supabase URL:', supabaseUrl ? 'Mevcut' : 'Eksik');
-console.log('Supabase Key:', supabaseKey ? 'Mevcut' : 'Eksik');
+console.log('Hugging Face API Key:', hfApiKey ? 'Mevcut' : 'Eksik');
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Supabase environment variables eksik!');
+if (!hfApiKey) {
+  console.error('Hugging Face API Key eksik!');
+  console.log('Hugging Face\'dan ücretsiz API key alabilirsin: https://huggingface.co/settings/tokens');
   process.exit(1);
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey);
-const chatbotAI = new ChatbotAI(supabaseUrl, supabaseKey);
-
-// AI modelini başlat
-let isModelReady = false;
-chatbotAI.loadDataAndTrain().then(success => {
-  isModelReady = success;
-  console.log('AI Model durumu:', isModelReady ? 'Hazır' : 'Hazır değil');
-}).catch(error => {
-  console.error('AI Model başlatma hatası:', error);
-});
+const chatbot = new HuggingFaceChatbot(hfApiKey);
 
 app.post('/api/chatbot', async (req, res) => {
   try {
@@ -40,30 +28,14 @@ app.post('/api/chatbot', async (req, res) => {
       return res.status(400).json({ cevap: 'Soru boş olamaz!' });
     }
 
-    if (!isModelReady) {
-      // Basit fallback sistemi
-      const soruLower = soru.toLowerCase();
-      let fallbackCevap = 'AI modeli henüz hazır değil, lütfen birkaç saniye bekleyin...';
-      
-      if (soruLower.includes('merhaba') || soruLower.includes('selam')) {
-        fallbackCevap = 'Merhaba! AI modeli henüz hazırlanıyor, ama size yardımcı olmaya çalışıyorum!';
-      } else if (soruLower.includes('nasılsın')) {
-        fallbackCevap = 'İyiyim! AI modeli eğitiliyor, biraz bekleyin lütfen.';
-      }
-      
-      return res.status(503).json({ 
-        cevap: fallbackCevap,
-        confidence: 0.1
-      });
-    }
-
-    // AI ile cevap al
-    const response = await chatbotAI.getResponse(soru);
-    console.log('AI Cevabı:', response.answer, 'Güven:', response.confidence);
+    // Hugging Face ile cevap al
+    const response = await chatbot.getResponse(soru);
+    console.log('Chatbot Cevabı:', response.answer, 'Model:', response.model);
     
     res.json({ 
       cevap: response.answer,
-      confidence: response.confidence
+      confidence: response.confidence,
+      model: response.model
     });
   } catch (err) {
     console.error('Genel hata:', err);
@@ -71,13 +43,14 @@ app.post('/api/chatbot', async (req, res) => {
   }
 });
 
-// Model durumunu kontrol et
+// Chatbot durumunu kontrol et
 app.get('/api/chatbot/status', (req, res) => {
   res.json({ 
-    ready: isModelReady,
-    message: isModelReady ? 'AI Model hazır' : 'AI Model eğitiliyor...'
+    ready: true,
+    message: 'Hugging Face Chatbot hazır',
+    model: 'Hugging Face'
   });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`AI Chatbot çalışıyor! Port: ${PORT}`));
+app.listen(PORT, () => console.log(`Hugging Face Chatbot çalışıyor! Port: ${PORT}`));
