@@ -21,12 +21,12 @@ class HuggingFaceChatbot {
 
       // Daha uygun model kullan
       const response = await this.hf.textGeneration({
-        model: 'gpt2',
+        model: 'cahya/gpt2-small-turkish',
         inputs: prompt,
         parameters: {
           max_length: 100,
           temperature: 0.8,
-          top_p:0.9,
+          top_p: 0.9,
           do_sample: true,
           return_full_text: false
         }

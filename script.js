@@ -261,6 +261,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const chatbotSend = document.getElementById('chatbot-send');
         const chatbotAnswer = document.getElementById('chatbot-answer');
         const chatbotClose = document.getElementById('chatbot-close');
+        // Chatbot açıldığında terminal prompt'unu gizle
+        const promptElement = document.querySelector('.prompt');
+        if (promptElement) {
+          promptElement.style.visibility = 'hidden';
+        }
         // chatbotInput.focus(); // Otomatik odak kaldırıldı
         chatbotSend.onclick = async () => {
           const soru = chatbotInput.value.trim();
@@ -273,13 +278,18 @@ document.addEventListener('DOMContentLoaded', () => {
           chatbotInput.disabled = true;
           chatbotSend.disabled = true;
           try {
-            const resp = await fetch('https://personel-web-site.onrender.com/api/chatbot', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ soru })
+            const response = await this.hf.textGeneration({
+              model: 'cahya/gpt2-small-turkish',
+              inputs: prompt,
+              parameters: {
+                max_length: 100,
+                temperature: 0.8,
+                top_p: 0.9,
+                do_sample: true,
+                return_full_text: false
+              }
             });
-            const data = await resp.json();
-            chatbotAnswer.textContent = data.cevap;
+            chatbotAnswer.textContent = response.text;
           } catch (e) {
             chatbotAnswer.textContent = "Bağlantı hatası!";
           }
