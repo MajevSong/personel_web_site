@@ -321,6 +321,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Chatbot Bilgi Yönetimi
         loadKnowledgeList();
         let addKnowledgeFormHandler = null;
+        // Bilgiye Ekle butonundan gelen log id'sini saklamak için
+        let pendingLogId = null;
         async function addKnowledgeFormSubmit(e) {
           e.preventDefault();
           const question = document.getElementById('knowledge-question').value.trim();
@@ -330,6 +332,15 @@ document.addEventListener('DOMContentLoaded', () => {
             .from('chatbot_knowledge')
             .insert([{ question, answer }]);
           if (!error) {
+            // Eğer bir logdan geldiyse, logun cevabını da güncelle
+            if (pendingLogId) {
+              await supabase
+                .from('chatbot_logs')
+                .update({ answer })
+                .eq('id', pendingLogId);
+              pendingLogId = null;
+              loadChatbotLogs();
+            }
             document.getElementById('knowledge-question').value = '';
             document.getElementById('knowledge-answer').value = '';
             loadKnowledgeList();
@@ -428,15 +439,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 <b>Soru:</b> <span style="color:#0f0;">${log.question}</span><br>
                 <b>Cevap:</b> <span style="color:#fff;">${log.answer}</span><br>
                 <span style="color:gray;font-size:0.9em;">${new Date(log.created_at).toLocaleString()}</span>
-                ${log.answer === 'Üzgünüm, bu soruya henüz bir cevabım yok.' ? `<button class="log-to-knowledge-btn" data-question="${encodeURIComponent(log.question)}" style="margin-left:8px;">Bilgiye Ekle</button>` : ''}
+                ${log.answer === 'Üzgünüm, bu soruya henüz bir cevabım yok.' ? `<button class="log-to-knowledge-btn" data-question="${encodeURIComponent(log.question)}" data-logid="${log.id}" style="margin-left:8px;">Bilgiye Ekle</button>` : ''}
               </li>`).join('') + '</ul>';
             // Bilgiye Ekle butonları için event ekle
             logsDiv.querySelectorAll('.log-to-knowledge-btn').forEach(btn => {
               btn.onclick = function() {
                 const question = decodeURIComponent(btn.getAttribute('data-question'));
+                const logId = btn.getAttribute('data-logid');
                 document.getElementById('knowledge-question').value = question;
                 document.getElementById('knowledge-answer').value = '';
                 document.getElementById('knowledge-answer').focus();
+                pendingLogId = logId;
               };
             });
           } else {
