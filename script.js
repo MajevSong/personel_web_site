@@ -253,6 +253,10 @@ document.addEventListener('DOMContentLoaded', () => {
                   </form>
                   <div id="knowledge-list">Yükleniyor...</div>
                 </div>
+                <div id="admin-chatbot-logs" style="margin-top:18px;padding:10px 6px 6px 6px;background:rgba(0,0,0,0.08);border-radius:8px;box-shadow:0 2px 8px 0 rgba(0,0,0,0.08);">
+                  <h4 style="margin:0 0 8px 0;font-size:1em;">📝 Chatbot Logları</h4>
+                  <div id="chatbot-logs-list">Yükleniyor...</div>
+                </div>
             </div>
         `;
         consoleOutput.appendChild(panel);
@@ -398,6 +402,32 @@ document.addEventListener('DOMContentLoaded', () => {
             });
           } else {
             listDiv.innerHTML = '<p>Henüz kayıt yok.</p>';
+          }
+        }
+        loadChatbotLogs();
+        async function loadChatbotLogs() {
+          const logsDiv = document.getElementById('chatbot-logs-list');
+          logsDiv.innerHTML = 'Yükleniyor...';
+          if (!supabase) {
+            logsDiv.innerHTML = '<p>Supabase bağlantı hatası.</p>';
+            return;
+          }
+          const { data, error } = await supabase
+            .from('chatbot_logs')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(50);
+          if (error) {
+            logsDiv.innerHTML = '<p>Hata oluştu.</p>';
+          } else if (data && data.length) {
+            logsDiv.innerHTML = '<ul style="padding-left:0;list-style:none;max-height:300px;overflow-y:auto;">' + data.map(log => `
+              <li style="margin-bottom:8px;background:rgba(0,255,0,0.04);padding:6px 4px;border-radius:6px;">
+                <b>Soru:</b> <span style="color:#0f0;">${log.question}</span><br>
+                <b>Cevap:</b> <span style="color:#fff;">${log.answer}</span><br>
+                <span style="color:gray;font-size:0.9em;">${new Date(log.created_at).toLocaleString()}</span>
+              </li>`).join('') + '</ul>';
+          } else {
+            logsDiv.innerHTML = '<p>Henüz log yok.</p>';
           }
         }
     }
