@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <li><strong>github</strong>    - Son GitHub repo aktivitelerini gösterir.</li>
                 <li><strong>Komut Geçmişi</strong> - Yukarı/Aşağı ok tuşları ile önceki komutlara eriş.</li>
                 <li><strong>Autocomplete</strong> - TAB tuşu ile komutları otomatik tamamla.</li>
+                <li><strong>chatbot</strong>   - Chatbot'a soru sorar ve yanıt alırsınız.</li>
             </ul>`,
         about: `<div class="about-content">
             <img src="https://github.com/MajevSong.png" alt="MajevSong GitHub Avatar" class="avatar">
