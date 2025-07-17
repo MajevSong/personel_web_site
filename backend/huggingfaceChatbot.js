@@ -42,11 +42,6 @@ class HuggingFaceChatbot {
         answer = answer.substring(0, 200) + '...';
       }
 
-      // Fallback cevaplar
-      if (!answer || answer.length < 5) {
-        answer = this.getFallbackResponse(question);
-      }
-
       console.log('Hugging Face cevabı:', answer);
       
       return {
@@ -58,33 +53,12 @@ class HuggingFaceChatbot {
     } catch (error) {
       console.error('Hugging Face hatası:', error);
       
-      // Hata durumunda fallback
+      // Hata durumunda sadece hata mesajı döndür
       return {
-        answer: this.getFallbackResponse(question),
-        confidence: 0.5,
-        model: 'Fallback'
+        answer: `Üzgünüm, AI modeli şu anda kullanılamıyor. Hata: ${error.message}`,
+        confidence: 0.0,
+        model: 'Error'
       };
-    }
-  }
-
-  // Fallback cevaplar
-  getFallbackResponse(question) {
-    const questionLower = question.toLowerCase();
-    
-    if (questionLower.includes('merhaba') || questionLower.includes('selam')) {
-      return 'Merhaba! Ben MajevSong\'un AI asistanıyım. Size nasıl yardımcı olabilirim?';
-    } else if (questionLower.includes('nasılsın')) {
-      return 'İyiyim, teşekkür ederim! Siz nasılsınız?';
-    } else if (questionLower.includes('python') || questionLower.includes('programlama')) {
-      return 'Python harika bir programlama dilidir! Web geliştirme, veri analizi ve yapay zeka için çok kullanışlıdır.';
-    } else if (questionLower.includes('javascript')) {
-      return 'JavaScript web geliştirmenin temelidir. Hem frontend hem backend\'de kullanılabilir.';
-    } else if (questionLower.includes('teşekkür')) {
-      return 'Rica ederim! Başka bir sorunuz varsa yardımcı olmaktan mutluluk duyarım.';
-    } else if (questionLower.includes('adın') || questionLower.includes('kimsin')) {
-      return 'Ben MajevSong\'un AI asistanıyım! Programlama ve teknoloji konularında size yardımcı olabilirim.';
-    } else {
-      return 'Üzgünüm, bu soruya tam olarak cevap veremiyorum. Programlama veya teknoloji ile ilgili bir soru sorabilir misiniz?';
     }
   }
 }

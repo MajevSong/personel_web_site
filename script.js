@@ -261,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const chatbotSend = document.getElementById('chatbot-send');
         const chatbotAnswer = document.getElementById('chatbot-answer');
         const chatbotClose = document.getElementById('chatbot-close');
-        chatbotInput.focus();
+        // chatbotInput.focus(); // Otomatik odak kaldırıldı
         chatbotSend.onclick = async () => {
           const soru = chatbotInput.value.trim();
           if (!soru) {
