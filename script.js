@@ -334,12 +334,15 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!error) {
             // Eğer bir logdan geldiyse, logun cevabını da güncelle
             if (pendingLogId) {
-              await supabase
+              const { error: logUpdateError } = await supabase
                 .from('chatbot_logs')
                 .update({ answer })
                 .eq('id', pendingLogId);
+              if (logUpdateError) {
+                alert('Log güncellenemedi! Policy veya bağlantı hatası olabilir.');
+              }
               pendingLogId = null;
-              loadChatbotLogs();
+              await loadChatbotLogs(); // await ekle, asenkron çakışma olmasın
             }
             document.getElementById('knowledge-question').value = '';
             document.getElementById('knowledge-answer').value = '';
@@ -428,7 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           const { data, error } = await supabase
             .from('chatbot_logs')
-            .select('*')
+            .select('*', { head: false })
             .order('created_at', { ascending: false })
             .limit(50);
           if (error) {
