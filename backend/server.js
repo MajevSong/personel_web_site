@@ -41,9 +41,19 @@ app.post('/api/chatbot', async (req, res) => {
     }
 
     if (!isModelReady) {
+      // Basit fallback sistemi
+      const soruLower = soru.toLowerCase();
+      let fallbackCevap = 'AI modeli henüz hazır değil, lütfen birkaç saniye bekleyin...';
+      
+      if (soruLower.includes('merhaba') || soruLower.includes('selam')) {
+        fallbackCevap = 'Merhaba! AI modeli henüz hazırlanıyor, ama size yardımcı olmaya çalışıyorum!';
+      } else if (soruLower.includes('nasılsın')) {
+        fallbackCevap = 'İyiyim! AI modeli eğitiliyor, biraz bekleyin lütfen.';
+      }
+      
       return res.status(503).json({ 
-        cevap: 'AI modeli henüz hazır değil, lütfen birkaç saniye bekleyin...',
-        confidence: 0
+        cevap: fallbackCevap,
+        confidence: 0.1
       });
     }
 

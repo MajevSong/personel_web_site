@@ -78,6 +78,15 @@ class ChatbotAI {
         return false;
       }
 
+      if (!data || data.length === 0) {
+        console.log('Veri bulunamadı, basit fallback sistemi kullanılacak');
+        this.responses = [
+          { question: 'merhaba', answer: 'Merhaba! Size nasıl yardımcı olabilirim?' },
+          { question: 'nasılsın', answer: 'İyiyim, teşekkür ederim!' }
+        ];
+        return true;
+      }
+
       this.responses = data;
       console.log(`${data.length} adet soru-cevap yüklendi`);
 
@@ -114,12 +123,12 @@ class ChatbotAI {
       const xs = tf.tensor2d(trainingData);
       const ys = tf.tensor2d(labels);
 
-      console.log('Model eğitiliyor...');
+      console.log('Model eğitiliyor... (20 epoch)');
       await this.model.fit(xs, ys, {
-        epochs: 100,
-        batchSize: 8,
-        validationSplit: 0.2,
-        verbose: 0
+        epochs: 20, // 100'den 20'ye düşürüldü
+        batchSize: 16, // 8'den 16'ya çıkarıldı
+        validationSplit: 0.1, // 0.2'den 0.1'e düşürüldü
+        verbose: 1 // Eğitim ilerlemesini göster
       });
 
       xs.dispose();
