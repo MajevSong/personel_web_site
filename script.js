@@ -320,7 +320,8 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         // Chatbot Bilgi Yönetimi
         loadKnowledgeList();
-        document.getElementById('add-knowledge-form').onsubmit = async function(e) {
+        let addKnowledgeFormHandler = null;
+        async function addKnowledgeFormSubmit(e) {
           e.preventDefault();
           const question = document.getElementById('knowledge-question').value.trim();
           const answer = document.getElementById('knowledge-answer').value.trim();
@@ -335,7 +336,9 @@ document.addEventListener('DOMContentLoaded', () => {
           } else {
             alert('Kayıt eklenemedi!');
           }
-        };
+        }
+        document.getElementById('add-knowledge-form').onsubmit = addKnowledgeFormSubmit;
+        addKnowledgeFormHandler = addKnowledgeFormSubmit;
         async function loadKnowledgeList() {
           const listDiv = document.getElementById('knowledge-list');
           listDiv.innerHTML = 'Yükleniyor...';
@@ -393,7 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('knowledge-answer').value = '';
                     loadKnowledgeList();
                     // Submit fonksiyonunu tekrar eklemeye çevir
-                    document.getElementById('add-knowledge-form').onsubmit = arguments.callee.caller;
+                    document.getElementById('add-knowledge-form').onsubmit = addKnowledgeFormHandler;
                   } else {
                     alert('Güncelleme başarısız!');
                   }
@@ -425,7 +428,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 <b>Soru:</b> <span style="color:#0f0;">${log.question}</span><br>
                 <b>Cevap:</b> <span style="color:#fff;">${log.answer}</span><br>
                 <span style="color:gray;font-size:0.9em;">${new Date(log.created_at).toLocaleString()}</span>
+                ${log.answer === 'Üzgünüm, bu soruya henüz bir cevabım yok.' ? `<button class="log-to-knowledge-btn" data-question="${encodeURIComponent(log.question)}" style="margin-left:8px;">Bilgiye Ekle</button>` : ''}
               </li>`).join('') + '</ul>';
+            // Bilgiye Ekle butonları için event ekle
+            logsDiv.querySelectorAll('.log-to-knowledge-btn').forEach(btn => {
+              btn.onclick = function() {
+                const question = decodeURIComponent(btn.getAttribute('data-question'));
+                document.getElementById('knowledge-question').value = question;
+                document.getElementById('knowledge-answer').value = '';
+                document.getElementById('knowledge-answer').focus();
+              };
+            });
           } else {
             logsDiv.innerHTML = '<p>Henüz log yok.</p>';
           }
@@ -532,7 +545,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 "Great things never come from comfort zones.",
                 "Dream it. Wish it. Do it.",
                 "Stay hungry. Stay foolish.",
-                "Code is like humor. When you have to explain it, it’s bad."
+                "Code is like humor. When you have to explain it, it's bad."
             ];
             const msg = fortunes[Math.floor(Math.random() * fortunes.length)];
             output.innerHTML = `<p><em>${msg}</em></p>`;
