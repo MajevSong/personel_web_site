@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
+const natural = require('natural');
 require('dotenv').config({ path: '../.env' });
 
 const app = express();
@@ -43,6 +44,26 @@ app.post('/api/chatbot', async (req, res) => {
     if (likeError) throw likeError;
     if (likeData && likeData.length) {
       return res.json({ cevap: likeData[0].answer });
+    }
+    // Levenshtein mesafesi ile en yakın soruyu bul
+    let { data: allData, error: allError } = await supabase
+      .from('chatbot_knowledge')
+      .select('answer, question');
+    if (allError) throw allError;
+    if (allData && allData.length) {
+      let minDist = Infinity;
+      let bestMatch = null;
+      allData.forEach(item => {
+        const dist = natural.LevenshteinDistance(soru.toLowerCase(), item.question.toLowerCase());
+        if (dist < minDist) {
+          minDist = dist;
+          bestMatch = item;
+        }
+      });
+      // Eşik değeri: çok alakasızsa cevap verme
+      if (bestMatch && minDist <= Math.max(5, Math.floor(soru.length * 0.4))) {
+        return res.json({ cevap: bestMatch.answer });
+      }
     }
     // Hiçbir şey bulunamazsa
     return res.json({ cevap: 'Üzgünüm, bu soruya henüz bir cevabım yok.' });
