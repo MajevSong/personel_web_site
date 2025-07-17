@@ -244,6 +244,15 @@ document.addEventListener('DOMContentLoaded', () => {
                   </div>
                   <div id="chatbot-answer" style="margin-top:10px;color:var(--text-color);min-height:20px;font-size:0.97em;"></div>
                 </div>
+                <div id="admin-chatbot-knowledge" style="margin-top:18px;padding:10px 6px 6px 6px;background:rgba(0,0,0,0.08);border-radius:8px;box-shadow:0 2px 8px 0 rgba(0,0,0,0.08);">
+                  <h4 style="margin:0 0 8px 0;font-size:1em;">📚 Chatbot Bilgi Yönetimi</h4>
+                  <form id="add-knowledge-form" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
+                    <input type="text" id="knowledge-question" placeholder="Soru" required style="padding:6px 8px;border-radius:4px;border:1px solid var(--border-color,#0f0);background:#181818;color:var(--text-color);">
+                    <textarea id="knowledge-answer" placeholder="Cevap" required rows="2" style="padding:6px 8px;border-radius:4px;border:1px solid var(--border-color,#0f0);background:#181818;color:var(--text-color);"></textarea>
+                    <button type="submit" style="padding:6px 0;background:var(--header-color,#0f0);color:#222;border:none;border-radius:4px;font-weight:bold;cursor:pointer;">Ekle</button>
+                  </form>
+                  <div id="knowledge-list">Yükleniyor...</div>
+                </div>
             </div>
         `;
         consoleOutput.appendChild(panel);
@@ -256,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         document.getElementById('admin-refresh-guestbook').onclick = loadAdminGuestbookList;
         loadAdminGuestbookList();
-        // Chatbot event handler
+        // Chatbot event handler (önceki kodun devamı)
         const chatbotInput = document.getElementById('chatbot-question');
         const chatbotSend = document.getElementById('chatbot-send');
         const chatbotAnswer = document.getElementById('chatbot-answer');
@@ -278,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
           chatbotInput.disabled = true;
           chatbotSend.disabled = true;
           try {
-            const response = await fetch('https://personel-web-site.onrender.com/api/chatbot', {
+            const response = await fetch(getApiBaseUrl() + '/api/chatbot', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ soru })
@@ -305,6 +314,92 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('terminal-input').focus();
           }
         };
+        // Chatbot Bilgi Yönetimi
+        loadKnowledgeList();
+        document.getElementById('add-knowledge-form').onsubmit = async function(e) {
+          e.preventDefault();
+          const question = document.getElementById('knowledge-question').value.trim();
+          const answer = document.getElementById('knowledge-answer').value.trim();
+          if (!question || !answer) return;
+          const { error } = await supabase
+            .from('chatbot_knowledge')
+            .insert([{ question, answer }]);
+          if (!error) {
+            document.getElementById('knowledge-question').value = '';
+            document.getElementById('knowledge-answer').value = '';
+            loadKnowledgeList();
+          } else {
+            alert('Kayıt eklenemedi!');
+          }
+        };
+        async function loadKnowledgeList() {
+          const listDiv = document.getElementById('knowledge-list');
+          listDiv.innerHTML = 'Yükleniyor...';
+          const { data, error } = await supabase
+            .from('chatbot_knowledge')
+            .select('*')
+            .order('created_at', { ascending: false });
+          if (error) {
+            listDiv.innerHTML = '<p>Hata oluştu.</p>';
+          } else if (data && data.length) {
+            listDiv.innerHTML = '<ul style="padding-left:0;list-style:none;">' + data.map(k => `
+              <li style="margin-bottom:8px;background:rgba(0,255,0,0.04);padding:6px 4px;border-radius:6px;">
+                <b>Soru:</b> <span style="color:#0f0;">${k.question}</span><br>
+                <b>Cevap:</b> <span style="color:#fff;">${k.answer}</span><br>
+                <button data-id="${k.id}" class="edit-knowledge-btn" style="margin-right:6px;">Düzenle</button>
+                <button data-id="${k.id}" class="delete-knowledge-btn">Sil</button>
+              </li>`).join('') + '</ul>';
+            // Silme
+            listDiv.querySelectorAll('.delete-knowledge-btn').forEach(btn => {
+              btn.onclick = async function() {
+                const id = btn.getAttribute('data-id');
+                btn.disabled = true;
+                btn.textContent = 'Siliniyor...';
+                const { error } = await supabase
+                  .from('chatbot_knowledge')
+                  .delete()
+                  .eq('id', id);
+                if (!error) {
+                  btn.parentElement.remove();
+                } else {
+                  btn.textContent = 'Hata';
+                }
+              };
+            });
+            // Düzenleme
+            listDiv.querySelectorAll('.edit-knowledge-btn').forEach(btn => {
+              btn.onclick = function() {
+                const id = btn.getAttribute('data-id');
+                const item = data.find(k => k.id == id);
+                if (!item) return;
+                document.getElementById('knowledge-question').value = item.question;
+                document.getElementById('knowledge-answer').value = item.answer;
+                // Güncelleme için submit fonksiyonunu değiştir
+                document.getElementById('add-knowledge-form').onsubmit = async function(e) {
+                  e.preventDefault();
+                  const newQ = document.getElementById('knowledge-question').value.trim();
+                  const newA = document.getElementById('knowledge-answer').value.trim();
+                  if (!newQ || !newA) return;
+                  const { error } = await supabase
+                    .from('chatbot_knowledge')
+                    .update({ question: newQ, answer: newA, updated_at: new Date().toISOString() })
+                    .eq('id', id);
+                  if (!error) {
+                    document.getElementById('knowledge-question').value = '';
+                    document.getElementById('knowledge-answer').value = '';
+                    loadKnowledgeList();
+                    // Submit fonksiyonunu tekrar eklemeye çevir
+                    document.getElementById('add-knowledge-form').onsubmit = arguments.callee.caller;
+                  } else {
+                    alert('Güncelleme başarısız!');
+                  }
+                };
+              };
+            });
+          } else {
+            listDiv.innerHTML = '<p>Henüz kayıt yok.</p>';
+          }
+        }
     }
 
     async function loadAdminGuestbookList() {
@@ -458,7 +553,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           output.innerHTML = '<p>Yanıt bekleniyor...</p>';
           consoleOutput.appendChild(output);
-          fetch('https://personel-web-site.onrender.com/api/chatbot', {
+          fetch(getApiBaseUrl() + '/api/chatbot', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ soru: msg })
@@ -649,6 +744,14 @@ document.addEventListener('DOMContentLoaded', () => {
             clearInterval(interval);
             canvas.remove();
         }, 3500);
+    }
+
+    // Ortama göre API adresini belirle
+    function getApiBaseUrl() {
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:3000';
+      }
+      return 'https://personel-web-site.onrender.com';
     }
 
     // Başlangıç animasyonu
