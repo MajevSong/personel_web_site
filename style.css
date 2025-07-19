@@ -59,6 +59,36 @@
   --font-family: "ZX Spectrum", "Courier New", monospace;
 }
 
+:root[data-theme='amiga'] {
+  --bg: #2b2b2b;
+  --fg: #00f6e2;
+  --accent: #ffb400;
+  --prompt: #fff;
+  --card-bg: #444;
+  --link: #ffb400;
+  --crt-glow: 0 0 8px #00f6e2, 0 0 2px #ffb400;
+}
+
+:root[data-theme='apple2'] {
+  --bg: #000;
+  --fg: #33ff33;
+  --accent: #fff;
+  --prompt: #33ff33;
+  --card-bg: #222;
+  --link: #fff;
+  --crt-glow: 0 0 8px #33ff33, 0 0 2px #fff;
+}
+
+:root[data-theme='zxspectrum'] {
+  --bg: #000;
+  --fg: #fff;
+  --accent: #ff0040;
+  --prompt: #00d7ff;
+  --card-bg: #222;
+  --link: #ff0040;
+  --crt-glow: 0 0 8px #00d7ff, 0 0 2px #ff0040;
+}
+
 body {
   background-color: var(--bg-color);
   color: var(--text-color);
@@ -106,6 +136,43 @@ body {
     opacity: 0.4;
   }
   100% {
+    opacity: 1;
+  }
+}
+
+/* --- GLITCH ANİMASYONU --- */
+.glitch {
+  animation: glitch-anim 0.35s linear 1;
+}
+@keyframes glitch-anim {
+  0% {
+    filter: none;
+    transform: none;
+    opacity: 1;
+  }
+  10% {
+    filter: blur(1.5px) brightness(1.2);
+    transform: translate(-2px, 1px) skewX(-2deg);
+    opacity: 0.8;
+  }
+  20% {
+    filter: blur(0.5px) brightness(1.5);
+    transform: translate(2px, -1px) skewX(2deg);
+    opacity: 0.7;
+  }
+  30% {
+    filter: blur(2px) brightness(0.8);
+    transform: translate(-1px, 2px) skewX(-1deg);
+    opacity: 0.9;
+  }
+  40% {
+    filter: none;
+    transform: none;
+    opacity: 1;
+  }
+  100% {
+    filter: none;
+    transform: none;
     opacity: 1;
   }
 }

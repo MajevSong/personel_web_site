@@ -5,6 +5,55 @@ MajevSong OS // Retro Terminal Web Uygulaması
 - Mobil ve erişilebilirlik desteği
 */
 
+// --- Matrix Arka Plan Yağmuru (her zaman aktif) ---
+let matrixBgCanvas, matrixBgCtx, matrixBgInterval;
+let matrixBgDensity = 32; // Kolon sayısı (yoğunluk)
+let matrixBgSpeed = 50;   // Animasyon hızı (ms)
+
+function startMatrixBgRain() {
+    if (document.getElementById('matrix-bg-canvas')) return;
+    matrixBgCanvas = document.createElement('canvas');
+    matrixBgCanvas.id = 'matrix-bg-canvas';
+    matrixBgCanvas.style.position = 'fixed';
+    matrixBgCanvas.style.top = 0;
+    matrixBgCanvas.style.left = 0;
+    matrixBgCanvas.style.width = '100vw';
+    matrixBgCanvas.style.height = '100vh';
+    matrixBgCanvas.style.pointerEvents = 'none';
+    matrixBgCanvas.style.zIndex = 1;
+    document.body.appendChild(matrixBgCanvas);
+    matrixBgCtx = matrixBgCanvas.getContext('2d');
+    resizeMatrixBgCanvas();
+    window.addEventListener('resize', resizeMatrixBgCanvas);
+    let cols = Math.floor(matrixBgCanvas.width / matrixBgDensity);
+    let drops = Array(cols).fill(1);
+    function drawMatrixBg() {
+        matrixBgCtx.fillStyle = 'rgba(0,0,0,0.08)';
+        matrixBgCtx.fillRect(0,0,matrixBgCanvas.width,matrixBgCanvas.height);
+        matrixBgCtx.font = '18px monospace';
+        matrixBgCtx.fillStyle = '#0f0';
+        for(let i=0;i<drops.length;i++){
+            const text = String.fromCharCode(0x30A0 + Math.random()*96);
+            matrixBgCtx.fillText(text, i*matrixBgDensity, drops[i]*20);
+            if(drops[i]*20 > matrixBgCanvas.height && Math.random() > 0.975) drops[i]=0;
+            drops[i]++;
+        }
+    }
+    matrixBgInterval = setInterval(drawMatrixBg, matrixBgSpeed);
+}
+function resizeMatrixBgCanvas() {
+    if (!matrixBgCanvas) return;
+    matrixBgCanvas.width = window.innerWidth;
+    matrixBgCanvas.height = window.innerHeight;
+}
+function stopMatrixBgRain() {
+    if (matrixBgInterval) clearInterval(matrixBgInterval);
+    if (matrixBgCanvas) matrixBgCanvas.remove();
+    window.removeEventListener('resize', resizeMatrixBgCanvas);
+}
+// Sayfa yüklendiğinde başlat
+window.addEventListener('DOMContentLoaded', startMatrixBgRain);
+
 document.addEventListener('DOMContentLoaded', () => {
     const consoleOutput = document.getElementById('console');
     const terminalInput = document.getElementById('terminal-input');
@@ -104,33 +153,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Tema uygulama fonksiyonu
     // Seçilen temaya göre body'ye class ekler veya custom tema ise CSS değişkenlerini ayarlar
+    const availableThemes = ['default', 'matrix', 'dos', 'c64', 'amiga', 'apple2', 'zxspectrum'];
+
     function applyTheme(theme) {
-        const validThemes = ['matrix', 'dos', 'c64', 'amiga', 'apple2', 'zxspectrum', 'default', 'custom'];
-        if (!validThemes.includes(theme)) {
-            return false;
-        }
-        document.body.classList.remove('theme-matrix', 'theme-dos', 'theme-c64', 'theme-amiga', 'theme-apple2', 'theme-zxspectrum');
-        // Custom tema ise CSS değişkenlerini ayarla
-        if (theme === 'custom') {
-            const custom = JSON.parse(localStorage.getItem('customTheme') || '{}');
-            document.documentElement.style.setProperty('--bg-color', custom.bg || '#1a1a1a');
-            document.documentElement.style.setProperty('--text-color', custom.text || '#00ff00');
-            document.documentElement.style.setProperty('--header-color', custom.header || '#00dd00');
-            document.documentElement.style.setProperty('--link-color', custom.link || '#00ffaa');
-            document.documentElement.style.setProperty('--border-color', custom.border || '#005500');
-            document.documentElement.style.setProperty('--font-family', custom.font || 'Courier New, monospace');
-            // CRT efekti
-            document.querySelector('.crt-effect').style.display = (custom.crt !== false) ? 'block' : 'none';
-        } else {
-            // Diğer temalar için class ekle
-            document.documentElement.removeAttribute('style');
-            document.querySelector('.crt-effect').style.display = 'block';
-            if (theme !== 'default') {
-                document.body.classList.add(`theme-${theme}`);
-            }
-        }
-        localStorage.setItem('theme', theme);
-        return true;
+      if (!availableThemes.includes(theme)) theme = 'default';
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('theme', theme);
     }
 
     // Supabase bağlantısı (CDN ile)
@@ -555,7 +583,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (cmd === 'echo') {
             output.innerHTML = `<pre>${args.join(' ')}</pre>`;
         } else if (cmd === 'whoami') {
-            output.innerHTML = `<pre>Guest</pre>`;
+            const role = getCurrentRole();
+            output.innerHTML = `<pre>${role.avatar} ${role.name}</pre>`;
         } else if (cmd === 'date') {
             output.innerHTML = `<pre>${new Date().toLocaleString('tr-TR')}</pre>`;
         } else if (cmd === 'notes') {
@@ -612,11 +641,12 @@ document.addEventListener('DOMContentLoaded', () => {
             consoleOutput.appendChild(output);
             fetchGithubActivity(output);
             return;
-        } else if (cmd === 'theme' && ['amiga','apple2','zxspectrum'].includes(args[0])) {
-            if (applyTheme(args[0])) {
-                output.innerHTML = `<p>${args[0].toUpperCase()} teması uygulandı.</p>`;
+        } else if (cmd === 'theme' || cmd === 'tema') {
+            if (args.length && availableThemes.includes(args[0])) {
+                applyTheme(args[0]);
+                output.innerHTML = `<p>Theme changed to <b>${args[0]}</b>.</p>`;
             } else {
-                output.innerHTML = `<p>Tema uygulanamadı.</p>`;
+                output.innerHTML = `<p>Available themes: ${availableThemes.join(', ')}</p>`;
             }
             consoleOutput.appendChild(output);
             return;
@@ -640,6 +670,59 @@ document.addEventListener('DOMContentLoaded', () => {
             ];
             const msg = fortunes[Math.floor(Math.random() * fortunes.length)];
             output.innerHTML = `<p><em>${msg}</em></p>`;
+        } else if (cmd === 'redpill') {
+            showPillAnimation('red');
+            return;
+        } else if (cmd === 'bluepill') {
+            showPillAnimation('blue');
+            return;
+        } else if (cmd === 'oracle') {
+            const oracles = [
+                'There is no spoon.',
+                'You have to let it all go, Neo. Fear, doubt, and disbelief.',
+                'The Matrix cannot tell you who you are.',
+                'Everything that has a beginning has an end.',
+                "You're here because you know something. What you know you can't explain."
+            ];
+            const msg = oracles[Math.floor(Math.random() * oracles.length)];
+            output.innerHTML = `<p><em>Oracle: "${msg}"</em></p>`;
+        } else if (cmd === 'followthewhiterabbit') {
+            showWhiteRabbit(false);
+            output.innerHTML = `<p style='color:#0ff;'>You followed the white rabbit. Welcome to the adventure!</p>`;
+        } else if (cmd === 'trinity') {
+            output.innerHTML = `<pre style='color:#fff;'>
+   /\\_/\\
+  ( o.o )
+   > ^ <   Trinity is watching you.
+ </pre>`;
+        } else if (cmd === 'zion') {
+            output.innerHTML = `<pre style='color:#0f0;'>
+   Z I O N
+  /------\\
+ |  O  O  |
+ |   --   |
+  \\____//
+ The last human city.
+ </pre>`;
+        } else if (cmd === 'asciiart') {
+            output.innerHTML = `<pre style='color:#0ff;'>
+   __  __       _        _
+  |  \\/  | __ _| |_ _ __(_)_ __   __ _
+  | |\\/| |/ _ | __| '__| | '_ \\ / _ |
+  | |  | | (_| | |_| |  | | | | | (_| |
+  |_|  |_|\\__,_|\\__|_|  |_|_| |_|\\__, |
+                                 |___/
+ </pre>`;
+        } else if (cmd === 'agent') {
+            const agentMsgs = [
+                'Mr. Anderson...',
+                'Do you hear that, Mr. Anderson? That is the sound of inevitability.',
+                "You can't win. It's pointless to keep fighting.",
+                'The purpose of life is to end.',
+                "I'm going to enjoy watching you die, Mr. Anderson."
+            ];
+            const msg = agentMsgs[Math.floor(Math.random() * agentMsgs.length)];
+            output.innerHTML = `<p><span style='color:#0ff;'>Agent Smith:</span> ${msg}</p>`;
         } else if (cmd === 'clear') {
             consoleOutput.innerHTML = '';
             return;
@@ -722,8 +805,40 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(data => { output.innerHTML = `<p>${data.cevap}</p>`; setTimeout(() => document.getElementById('terminal-input')?.focus(), 50); })
             .catch(() => { output.innerHTML = '<p>Bağlantı hatası!</p>'; });
           return;
+        } else if (cmd === 'dodge' || cmd === 'matrixgame') {
+            startMatrixDodgeGame();
+            output.innerHTML = `<p>Matrix Dodge the Bullets oyunu başlatıldı! Ok tuşları ile kaç, ESC ile çık.</p>`;
+            consoleOutput.appendChild(output);
+            return;
         } else if (command.trim() !== '') {
             output.innerHTML = `<p>'${command}' is not recognized as an internal or external command.</p>`;
+            // %30 ihtimalle glitch efekti uygula
+            if (Math.random() < 0.3) {
+                output.classList.add('glitch');
+                output.addEventListener('animationend', function handler() {
+                    output.classList.remove('glitch');
+                    output.removeEventListener('animationend', handler);
+                });
+            }
+        } else if (cmd === 'matrixlore' || cmd === 'matrixinfo') {
+            const lore = matrixLoreList[Math.floor(Math.random() * matrixLoreList.length)];
+            output.innerHTML = `<h4>${lore.title}</h4><p>${lore.content}</p>`;
+        } else if (cmd === 'matrixreplik' || cmd === 'matrixquote') {
+            const quote = matrixQuotes[Math.floor(Math.random() * matrixQuotes.length)];
+            output.innerHTML = `<p><em>"${quote}"</em></p>`;
+        } else if (cmd === 'matrixclock' || cmd === 'clock') {
+            output.innerHTML = getMatrixClockHtml();
+            // Saat animasyonu için 5 saniye boyunca güncelle
+            let t = 0;
+            const interval = setInterval(() => {
+                output.innerHTML = getMatrixClockHtml();
+                t++;
+                if (t > 5) clearInterval(interval);
+            }, 1000);
+        } else if (cmd === 'matrixglitch' || cmd === 'systemfailure') {
+            output.innerHTML = `<span style='color:#f00;font-weight:bold;'>SYSTEM FAILURE</span>`;
+            document.body.classList.add('glitch');
+            setTimeout(() => document.body.classList.remove('glitch'), 1200);
         }
         consoleOutput.appendChild(output);
     }
@@ -816,6 +931,147 @@ document.addEventListener('DOMContentLoaded', () => {
             exitBtn.style.display = 'block';
         }
         exitBtn.addEventListener('click', closeSnake);
+    }
+
+    // --- Matrix Dodge the Bullets Mini Oyun ---
+    function startMatrixDodgeGame() {
+        if (document.getElementById('matrix-dodge-modal')) return;
+        const modal = document.createElement('div');
+        modal.id = 'matrix-dodge-modal';
+        modal.style.position = 'fixed';
+        modal.style.top = '50%';
+        modal.style.left = '50%';
+        modal.style.transform = 'translate(-50%, -50%)';
+        modal.style.background = 'rgba(10,20,10,0.98)';
+        modal.style.border = '2px solid var(--border-color, #00ff00)';
+        modal.style.zIndex = 10000;
+        modal.style.padding = '16px';
+        modal.style.boxShadow = '0 0 32px #000';
+        modal.innerHTML = `<canvas id="matrix-dodge-canvas" width="320" height="400" style="display:block;background:#111;margin:0 auto;"></canvas><div id="matrix-dodge-score" style="text-align:center;color:var(--text-color,#0f0);margin-top:8px;"></div><div style='text-align:center;color:gray;font-size:0.9em;'>ESC ile çık</div><button id='matrix-dodge-exit-btn' style='display:none;margin:12px auto 0 auto;padding:8px 18px;font-size:1.1em;background:var(--border-color,#0f0);color:var(--bg-color,#111);border:none;border-radius:6px;cursor:pointer;width:90%;max-width:220px;'>Kapat</button>`;
+        document.body.appendChild(modal);
+
+        const canvas = document.getElementById('matrix-dodge-canvas');
+        const ctx = canvas.getContext('2d');
+        const playerW = 32, playerH = 16;
+        let playerX = canvas.width/2 - playerW/2;
+        const playerY = canvas.height - playerH - 10;
+        let left = false, right = false;
+        let bullets = [];
+        let score = 0;
+        let gameOver = false;
+        let interval;
+        let speed = 2;
+        let spawnRate = 30; // Kaç frame'de bir yeni mermi
+        let frame = 0;
+        function drawPlayer() {
+            ctx.save();
+            ctx.fillStyle = '#0ff';
+            ctx.font = 'bold 18px monospace';
+            ctx.fillText('NEO', playerX, playerY+playerH);
+            ctx.restore();
+        }
+        function drawBullets() {
+            ctx.save();
+            ctx.font = '18px monospace';
+            bullets.forEach(b => {
+                ctx.fillStyle = '#0f0';
+                ctx.fillText(b.char, b.x, b.y);
+            });
+            ctx.restore();
+        }
+        function updateBullets() {
+            bullets.forEach(b => b.y += speed);
+            bullets = bullets.filter(b => b.y < canvas.height);
+        }
+        function spawnBullet() {
+            const chars = ['0','1','ア','ネ','シ','ミ','リ','E','A','O','N','X','Z','M'];
+            const char = Math.random()<0.1 ? (Math.random()<0.5 ? 'WAKE UP, NEO' : 'SYSTEM FAILURE') : chars[Math.floor(Math.random()*chars.length)];
+            const x = Math.random() * (canvas.width - 24);
+            bullets.push({x, y: 0, char});
+        }
+        function checkCollision() {
+            for (let b of bullets) {
+                if (b.char.length > 2) {
+                    // Mesajlar için geniş alan kontrolü
+                    if (b.y + 18 > playerY && b.y < playerY + playerH && b.x < playerX + playerW + 60 && b.x + 120 > playerX) {
+                        return true;
+                    }
+                } else {
+                    if (b.y + 18 > playerY && b.y < playerY + playerH && b.x < playerX + playerW && b.x + 18 > playerX) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        function draw() {
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+            // Matrix kod yağmuru efekti
+            ctx.save();
+            ctx.globalAlpha = 0.15;
+            ctx.font = '18px monospace';
+            for(let i=0;i<canvas.width;i+=20){
+                for(let j=0;j<canvas.height;j+=40){
+                    ctx.fillStyle = '#0f0';
+                    ctx.fillText(String.fromCharCode(0x30A0 + Math.random()*96), i, j);
+                }
+            }
+            ctx.restore();
+            drawPlayer();
+            drawBullets();
+        }
+        function update() {
+            if(gameOver) return;
+            if(left) playerX -= 5;
+            if(right) playerX += 5;
+            if(playerX < 0) playerX = 0;
+            if(playerX > canvas.width-playerW) playerX = canvas.width-playerW;
+            if(frame % spawnRate === 0) spawnBullet();
+            updateBullets();
+            if (checkCollision()) {
+                gameOver = true;
+                document.getElementById('matrix-dodge-score').innerHTML = `<b>Oyun Bitti! Skor: ${score}</b>`;
+                clearInterval(interval);
+                setTimeout(() => {
+                    const out = document.createElement('div');
+                    out.innerHTML = `<p>Matrix Dodge the Bullets skorun: <b>${score}</b></p>`;
+                    consoleOutput.appendChild(out);
+                    window.scrollTo(0, document.body.scrollHeight);
+                }, 500);
+                return;
+            }
+            score++;
+            document.getElementById('matrix-dodge-score').innerText = `Skor: ${score}`;
+            draw();
+            frame++;
+        }
+        draw();
+        document.getElementById('matrix-dodge-score').innerText = `Skor: ${score}`;
+        interval = setInterval(update, 30);
+        function keyHandler(e){
+            if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A') left=true;
+            else if(e.key==='ArrowRight'||e.key==='d'||e.key==='D') right=true;
+            else if(e.key==='Escape') closeGame();
+        }
+        function keyUpHandler(e){
+            if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A') left=false;
+            else if(e.key==='ArrowRight'||e.key==='d'||e.key==='D') right=false;
+        }
+        window.addEventListener('keydown', keyHandler);
+        window.addEventListener('keyup', keyUpHandler);
+        function closeGame(){
+            clearInterval(interval);
+            window.removeEventListener('keydown', keyHandler);
+            window.removeEventListener('keyup', keyUpHandler);
+            modal.remove();
+        }
+        // Mobilde "Kapat" butonunu göster
+        const exitBtn = document.getElementById('matrix-dodge-exit-btn');
+        if (window.innerWidth < 800) {
+            exitBtn.style.display = 'block';
+        }
+        exitBtn.addEventListener('click', closeGame);
     }
 
     // GitHub aktivitesi çekme fonksiyonu
@@ -994,6 +1250,47 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- Beyaz Tavşan Animasyonu Fonksiyonu ---
+    function showWhiteRabbit(auto) {
+        if (document.getElementById('white-rabbit')) return;
+        const rabbit = document.createElement('div');
+        rabbit.id = 'white-rabbit';
+        rabbit.innerHTML = '🐇';
+        rabbit.style.position = 'fixed';
+        rabbit.style.left = '-60px';
+        rabbit.style.bottom = '40px';
+        rabbit.style.fontSize = '3rem';
+        rabbit.style.zIndex = 10000;
+        rabbit.style.transition = 'left 2.5s linear';
+        rabbit.style.cursor = 'pointer';
+        document.body.appendChild(rabbit);
+        setTimeout(() => { rabbit.style.left = 'calc(100vw + 60px)'; }, 100);
+        setTimeout(() => { if (rabbit) rabbit.remove(); }, 2700);
+        rabbit.onclick = function() {
+            rabbit.innerHTML = '✨🐇✨';
+            rabbit.style.transition = 'all 0.7s cubic-bezier(.68,-0.55,.27,1.55)';
+            rabbit.style.transform = 'scale(1.5) rotate(-20deg)';
+            setTimeout(() => { rabbit.remove(); }, 700);
+            // Terminale özel mesaj
+            const msg = document.createElement('div');
+            msg.innerHTML = `<p style='color:#0ff;'>Beyaz tavşanı takip ettin, Neo. Şimdi gerçeklik başlıyor...</p>`;
+            consoleOutput.appendChild(msg);
+            window.scrollTo(0, document.body.scrollHeight);
+        };
+    }
+
+    // --- Tavşan Animasyonunu Otomatik Başlat ---
+    function scheduleWhiteRabbit() {
+        const min = 2 * 60 * 1000; // 2 dakika
+        const max = 5 * 60 * 1000; // 5 dakika
+        const next = Math.random() * (max - min) + min;
+        setTimeout(() => {
+            showWhiteRabbit(true);
+            scheduleWhiteRabbit();
+        }, next);
+    }
+    scheduleWhiteRabbit();
+
     // Ortama göre API adresini belirle
     function getApiBaseUrl() {
       if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -1020,6 +1317,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Her tuşa basıldığında ses çal
     document.addEventListener('keydown', playKeystroke);
+
+    // Komut yazarken arada bir prompt'a glitch efekti
+    terminalInput.addEventListener('keydown', (e) => {
+      if (e.key.length === 1 && Math.random() < 0.10) { // %10 ihtimalle
+        promptElement.classList.add('glitch');
+        promptElement.addEventListener('animationend', function handler() {
+          promptElement.classList.remove('glitch');
+          promptElement.removeEventListener('animationend', handler);
+        });
+      }
+    });
 
     // Erişilebilirlik: input ve output için tabindex ve aria-label
     terminalInput.setAttribute('tabindex', '0');
@@ -1092,5 +1400,188 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('theme') || 'default';
     applyTheme(savedTheme);
     printNextLine();
-});
+
+    // --- Rol Seçimi ve Kişiselleştirme ---
+    const matrixRoles = [
+      {
+        key: 'neo',
+        name: 'Neo',
+        avatar: '😎',
+        prompt: 'C:/Users/Neo>',
+        color: '#0ff'
+      },
+      {
+        key: 'agent',
+        name: 'Agent Smith',
+        avatar: '🕶️',
+        prompt: 'C:/Matrix/Agent>',
+        color: '#f00'
+      }
+    ];
+    function getCurrentRole() {
+      const saved = localStorage.getItem('matrixRole');
+      return matrixRoles.find(r => r.key === saved) || matrixRoles[0];
+    }
+    function setRole(roleKey) {
+      localStorage.setItem('matrixRole', roleKey);
+    }
+    function showRoleModal(force) {
+      if (document.getElementById('role-modal')) return;
+      if (!force && localStorage.getItem('matrixRole')) return;
+      const modal = document.createElement('div');
+      modal.id = 'role-modal';
+      modal.style.position = 'fixed';
+      modal.style.top = 0;
+      modal.style.left = 0;
+      modal.style.width = '100vw';
+      modal.style.height = '100vh';
+      modal.style.background = 'rgba(0,0,0,0.92)';
+      modal.style.zIndex = 100000;
+      modal.style.display = 'flex';
+      modal.style.alignItems = 'center';
+      modal.style.justifyContent = 'center';
+      modal.innerHTML = `
+        <div style="background:#181c18;padding:36px 32px 28px 32px;border-radius:18px;box-shadow:0 0 32px #000;max-width:340px;text-align:center;">
+          <h2 style="color:#0f0;margin-bottom:18px;">Welcome to the Matrix!</h2>
+          <p style="color:#fff;font-size:1.1em;margin-bottom:18px;">Who do you want to be?</p>
+          <button id="role-neo" style="font-size:1.2em;padding:12px 32px;margin:8px 12px 0 0;background:#0f0;color:#111;border:none;border-radius:8px;cursor:pointer;">😎 Neo</button>
+          <button id="role-agent" style="font-size:1.2em;padding:12px 32px;margin:8px 0 0 12px;background:#f00;color:#fff;border:none;border-radius:8px;cursor:pointer;">🕶️ Agent Smith</button>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      document.getElementById('role-neo').onclick = () => { setRole('neo'); modal.remove(); updatePrompt(); };
+      document.getElementById('role-agent').onclick = () => { setRole('agent'); modal.remove(); updatePrompt(); };
+    }
+    function updatePrompt() {
+      const role = getCurrentRole();
+      const promptEl = document.querySelector('.prompt span');
+      if (promptEl) {
+        promptEl.innerHTML = `<span style='color:${role.color}'>${role.prompt}</span>`;
+      }
+    }
+    // Sayfa açılışında rol seçimi modalı göster
+    window.addEventListener('DOMContentLoaded', () => {
+      showRoleModal();
+      setTimeout(updatePrompt, 200);
+    });
+}); // <--- Burası DOMContentLoaded event handler'ının kapanışı
+
+// --- Kırmızı/Mavi Hap Animasyonu Fonksiyonu ---
+function showPillAnimation(color) {
+    if (document.getElementById('pill-animation')) return;
+    const pill = document.createElement('div');
+    pill.id = 'pill-animation';
+    pill.style.position = 'fixed';
+    pill.style.top = '50%';
+    pill.style.left = '50%';
+    pill.style.transform = 'translate(-50%, -50%) scale(0.7)';
+    pill.style.zIndex = 10001;
+    pill.style.transition = 'transform 0.7s cubic-bezier(.68,-0.55,.27,1.55)';
+    pill.style.cursor = 'pointer';
+    const grad = color === 'red' ? '#ff0033,#ff6666' : '#0099ff,#66ccff';
+    const shadow = color === 'red' ? '#ff0033' : '#0099ff';
+    const pillStyle = 'width:120px;height:48px;border-radius:30px;background:linear-gradient(90deg,' + grad + ');box-shadow:0 0 32px ' + shadow + '88,0 0 8px #000;display:flex;align-items:center;justify-content:center;animation:pill-glow 1.2s infinite alternate;';
+    const pillText = color === 'red' ? 'RED' : 'BLUE';
+    const pillMsg = color === 'red' ? 'Gerçekliği seçmek üzeresin...' : 'Her şey eskisi gibi devam edecek...';
+    pill.innerHTML = '<div style="' + pillStyle + '"><span style="color:#fff;font-size:1.5em;font-weight:bold;letter-spacing:2px;">' + pillText + '</span></div><div style="margin-top:18px;text-align:center;color:#fff;font-size:1.1em;">' + pillMsg + '</div>';
+    document.body.appendChild(pill);
+    setTimeout(function(){pill.style.transform='translate(-50%, -50%) scale(1.1)';},50);
+    function finishPill() {
+        pill.style.transform = 'translate(-50%, -50%) scale(0.7)';
+        setTimeout(function(){pill.remove();},400);
+        // Tema değişimi ve mesaj
+        const output = document.createElement('div');
+        if (color === 'red') {
+            applyTheme('matrix');
+            output.innerHTML = "<p><span style='color:#f00;'>Gerçekliğe hoş geldin, Neo.</span><br>Matrix'in kodları artık seninle.</p>";
+            document.body.style.animation = 'glitch 0.5s linear 2';
+            setTimeout(function() { document.body.style.animation = ''; }, 1000);
+        } else {
+            applyTheme('default');
+            output.innerHTML = "<p><span style='color:#00f;'>Mavi hapı seçtin. Her şey eskisi gibi devam edecek.</span></p>";
+            document.body.style.animation = 'none';
+        }
+        document.getElementById('console').appendChild(output);
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+    pill.onclick = finishPill;
+    setTimeout(finishPill, 3500);
+}
+
+// --- Hap animasyonu için ek CSS ---
+const pillAnimStyle = document.createElement('style');
+pillAnimStyle.innerHTML = `@keyframes pill-glow {0%{box-shadow:0 0 32px #fff4,0 0 8px #000;}100%{box-shadow:0 0 48px #fff8,0 0 16px #000;}}`;
+document.head.appendChild(pillAnimStyle);
+
+const matrixLoreList = [
+  {
+    title: 'Matrix Nedir?',
+    content: 'Matrix, insanları gerçek dünyadan koparıp sanal bir gerçeklikte tutan bir simülasyon sistemidir. İnsanlar, makineler tarafından enerji kaynağı olarak kullanılırken, zihinleri Matrix adlı bu sanal dünyada yaşamaktadır.'
+  },
+  {
+    title: 'Neo',
+    content: 'Neo (Thomas Anderson), Matrix üçlemesinin ana karakteridir. "Seçilmiş Kişi" olarak Matrix sistemini kırabilecek tek kişidir.'
+  },
+  {
+    title: 'Morpheus',
+    content: 'Morpheus, Zion direnişinin liderlerinden biridir ve Neo\'nun gerçek dünyaya uyanmasına yardımcı olur.'
+  },
+  {
+    title: 'Agent Smith',
+    content: 'Agent Smith, Matrix\'in ana ajanıdır. Sistemi korumak ve insanları kontrol altında tutmak için programlanmıştır.'
+  },
+  {
+    title: 'Matrix Felsefesi',
+    content: 'Matrix, gerçeklik, özgür irade, kader ve insanın doğası gibi felsefi temaları işler. "Gerçek nedir?" sorusu filmin ana temalarından biridir.'
+  }
+];
+const matrixQuotes = [
+  'There is no spoon.',
+  'Welcome to the real world.',
+  'The Matrix has you...',
+  'Wake up, Neo.',
+  'Unfortunately, no one can be told what the Matrix is. You have to see it for yourself.',
+  'I can only show you the door. You\'re the one that has to walk through it.',
+  'Free your mind.',
+  'Choice. The problem is choice.',
+  'Do not try and bend the spoon. That\'s impossible. Instead, only try to realize the truth.',
+  'What is real? How do you define real?'
+];
+
+// Matrix Clock için yardımcı fonksiyon
+function getMatrixClockHtml() {
+  const now = new Date();
+  const h = now.getHours().toString().padStart(2, '0');
+  const m = now.getMinutes().toString().padStart(2, '0');
+  const s = now.getSeconds().toString().padStart(2, '0');
+  const date = now.toLocaleDateString('tr-TR');
+  return `<div style="font-family:'Courier New',monospace;font-size:2em;color:#0f0;background:#000;padding:18px 32px;border-radius:12px;box-shadow:0 0 24px #0f08;display:inline-block;letter-spacing:0.15em;">${h}:${m}:${s}<br><span style='font-size:0.6em;color:#0ff;'>${date}</span></div>`;
+}
+
+// Otomatik Matrix glitch ve sürpriz mesaj fonksiyonu
+function scheduleMatrixSurprise() {
+  const min = 2 * 60 * 1000; // 2 dakika
+  const max = 5 * 60 * 1000; // 5 dakika
+  const next = Math.random() * (max - min) + min;
+  setTimeout(() => {
+    const surpriseType = Math.random();
+    if (surpriseType < 0.5) {
+      // Glitch/SYSTEM FAILURE efekti
+      const output = document.createElement('div');
+      output.innerHTML = `<span style='color:#f00;font-weight:bold;'>SYSTEM FAILURE</span>`;
+      document.getElementById('console').appendChild(output);
+      document.body.classList.add('glitch');
+      setTimeout(() => document.body.classList.remove('glitch'), 1200);
+    } else {
+      // Rastgele Matrix repliği/sürpriz mesaj
+      const quote = matrixQuotes[Math.floor(Math.random() * matrixQuotes.length)];
+      const output = document.createElement('div');
+      output.innerHTML = `<p><em>"${quote}"</em></p>`;
+      document.getElementById('console').appendChild(output);
+    }
+    window.scrollTo(0, document.body.scrollHeight);
+    scheduleMatrixSurprise();
+  }, next);
+}
+scheduleMatrixSurprise();
 

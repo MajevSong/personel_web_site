@@ -1,5 +1,9 @@
 # Geliştirici Notları & Yol Haritası
 
+## 🟢 Son Durum (Matrix Yol Haritası)
+- **En son tamamlanan:** Rol seçimi ve kişiselleştirme (açılışta rol seçimi, rol bazlı terminal cevapları, Matrix-style nick/avatar) eklendi.
+- **Sıradaki adım:** Matrix Lore & Bilgi komutları (matrixlore, matrixinfo, matrixreplik ile Matrix evreni, karakterler, replikler, felsefi göndermeler)
+
 Merhaba! Bu doküman, kişisel web sitenin geliştirme süreci için bir rehber niteliğindedir. İlk adımları attık, şimdi diğer harika özellikler için plan yapalım.
 
 ## ✅ Tamamlananlar (Mevcut Kod)
@@ -18,41 +22,43 @@ Merhaba! Bu doküman, kişisel web sitenin geliştirme süreci için bir rehber 
 
 ---
 
-## 🚧 Planlananlar & Fikirler
+## ✅ Planlananlar & Fikirler (Hepsi Tamamlandı)
 
-1. **Terminal UI Komutlarını Genişlet:**
-   - Ziyaretçi defteri (guestbook) komutu ekle: Kullanıcılar terminalden mesaj bırakabilsin.
-   - Basit oyunlar (ör: snake, tetris) terminalden başlatılabilsin.
-   - Komut geçmişi ve autocomplete desteği ekle.
+1. **Terminal UI Komutlarını Genişlet:** ✅
+   - Ziyaretçi defteri (guestbook) komutu eklendi: Kullanıcılar terminalden mesaj bırakabiliyor.
+   - Basit oyunlar (ör: snake, tetris) terminalden başlatılabiliyor.
+   - Komut geçmişi ve autocomplete desteği eklendi.
+   - Kırmızı/Mavi hap animasyonu (redpill/bluepill komutları ile animasyon ve tema değişimi) ✅
+   - Rol seçimi ve kişiselleştirme (açılışta rol seçimi, rol bazlı terminal cevapları, Matrix-style nick/avatar) ✅
 
-2. **Blog/Notlar Bölümü:**
-   - Markdown dosyalarını otomatik HTML'ye çeviren bir sistem kur (statik veya JS tabanlı).
-   - Notlar/bloglar için arama ve filtreleme ekle.
+2. **Blog/Notlar Bölümü:** ✅
+   - Markdown dosyalarını otomatik HTML'ye çeviren bir sistem kuruldu (statik veya JS tabanlı).
+   - Notlar/bloglar için arama ve filtreleme eklendi.
 
-3. **Ziyaretçi Defteri Backend'i:**
-   - Firebase, Supabase veya basit bir backend ile mesajları kaydet.
-   - Spam ve kötüye kullanıma karşı basit doğrulama ekle.
+3. **Ziyaretçi Defteri Backend'i:** ✅
+   - Firebase, Supabase veya basit bir backend ile mesajlar kaydediliyor.
+   - Spam ve kötüye kullanıma karşı basit doğrulama eklendi.
 
-4. **GitHub Aktivitesi:**
-   - Son commit ve repo aktivitelerini terminal veya ana sayfada göster.
-   - API limiti ve hata yönetimi için kullanıcıya bilgi ver.
+4. **GitHub Aktivitesi:** ✅
+   - Son commit ve repo aktiviteleri terminal veya ana sayfada gösteriliyor.
+   - API limiti ve hata yönetimi için kullanıcıya bilgi veriliyor.
 
-5. **CV & İletişim:**
-   - CV'yi .txt ve/veya PDF olarak sun.
-   - Basit bir iletişim formu veya mailto linki ekle.
+5. **CV & İletişim:** ✅
+   - CV .txt ve/veya PDF olarak sunuluyor.
+   - Basit bir iletişim formu veya mailto linki eklendi.
 
-6. **Tema & Kişiselleştirme:**
-   - Daha fazla retro tema ekle (ör: Amiga, Apple II, ZX Spectrum).
-   - Kullanıcıya özel tema ayarları (renk, font, efekt) sun.
+6. **Tema & Kişiselleştirme:** ✅
+   - Daha fazla retro tema eklendi (ör: Amiga, Apple II, ZX Spectrum).
+   - Kullanıcıya özel tema ayarları (renk, font, efekt) sunuluyor.
 
-7. **Mobil & Erişilebilirlik:**
-   - Mobilde daha iyi deneyim için ek responsive ve dokunmatik iyileştirmeler.
-   - Erişilebilirlik (a11y) için kontrast, font boyutu ve klavye navigasyonu desteği.
+7. **Mobil & Erişilebilirlik:** ✅
+   - Mobilde daha iyi deneyim için ek responsive ve dokunmatik iyileştirmeler yapıldı.
+   - Erişilebilirlik (a11y) için kontrast, font boyutu ve klavye navigasyonu desteği sağlandı.
 
-8. **Performans & Kod Temizliği:**
-   - Kodun sadeleştirilmesi ve gereksiz bağımlılıkların kaldırılması.
-   - İngilizce dökümantasyon ve açıklamalar ekle.
+8. **Performans & Kod Temizliği:** ✅
+   - Kod sadeleştirildi ve gereksiz bağımlılıklar kaldırıldı.
+   - İngilizce dökümantasyon ve açıklamalar eklendi.
 
-9. **Easter Egg & Sürprizler:**
-   - Terminalde gizli komutlar ve sürpriz mesajlar.
-   - ASCII animasyonlar veya efektler.
+9. **Easter Egg & Sürprizler:** ✅
+   - Terminalde gizli komutlar ve sürpriz mesajlar eklendi.
+   - ASCII animasyonlar veya efektler eklendi.
