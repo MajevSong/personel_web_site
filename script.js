@@ -916,6 +916,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function startIdleMatrix() {
         if (!isIdleMatrixActive) {
             isIdleMatrixActive = true;
+            if (idleTimer) clearTimeout(idleTimer); // Idle animasyon başlarken timer'ı durdur
             startMatrixRain(true); // idle için özel flag
         }
     }
@@ -924,17 +925,19 @@ document.addEventListener('DOMContentLoaded', () => {
             isIdleMatrixActive = false;
             const canvas = document.getElementById('matrix-canvas');
             if (canvas) canvas.remove();
+            resetIdleTimer(); // Animasyon kapanınca idle timer tekrar başlasın
         }
     }
     function resetIdleTimer() {
         if (idleTimer) clearTimeout(idleTimer);
-        stopIdleMatrix();
+        if (isIdleMatrixActive) return; // Animasyon aktifken timer başlatma
         idleTimer = setTimeout(() => {
             startIdleMatrix();
         }, 10000);
     }
     ['mousemove','keydown','mousedown','touchstart','scroll'].forEach(evt => {
-        window.addEventListener(evt, resetIdleTimer, true);
+        window.addEventListener(evt, stopIdleMatrix, true); // Hareket olursa animasyon kapanır ve timer başlar
+        window.addEventListener(evt, resetIdleTimer, true); // Hareket olursa timer sıfırlanır (animasyon yoksa)
     });
     resetIdleTimer();
 
