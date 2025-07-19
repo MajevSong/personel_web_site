@@ -1,3 +1,10 @@
+/*
+MajevSong OS // Retro Terminal Web Uygulaması
+- Komut tabanlı terminal arayüzü
+- Tema, not, guestbook, oyun, chatbot, github entegrasyonu
+- Mobil ve erişilebilirlik desteği
+*/
+
 document.addEventListener('DOMContentLoaded', () => {
     const consoleOutput = document.getElementById('console');
     const terminalInput = document.getElementById('terminal-input');
@@ -85,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let historyIndex = -1;
 
     // Komut listesi autocomplete için
-    const commandList = ['help', 'about', 'projects', 'theme', 'clear', 'guestbook', 'contact', 'notes', 'snake', 'github', 'theme custom', 'contrast', 'fontsize'];
+    const commandList = ['help', 'about', 'projects', 'theme', 'clear', 'guestbook', 'contact', 'notes', 'snake', 'github', 'theme custom', 'contrast', 'fontsize', 'ls', 'cat', 'echo', 'whoami', 'date', 'theme amiga', 'theme apple2', 'theme zxspectrum'];
 
     // Klavye sesi çalma fonksiyonu (her tuş için yeni Audio nesnesi ile daha senkron)
     const playKeystroke = () => {
@@ -96,12 +103,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Tema uygulama fonksiyonu
+    // Seçilen temaya göre body'ye class ekler veya custom tema ise CSS değişkenlerini ayarlar
     function applyTheme(theme) {
-        const validThemes = ['matrix', 'dos', 'c64', 'default', 'custom'];
+        const validThemes = ['matrix', 'dos', 'c64', 'amiga', 'apple2', 'zxspectrum', 'default', 'custom'];
         if (!validThemes.includes(theme)) {
             return false;
         }
-        document.body.classList.remove('theme-matrix', 'theme-dos', 'theme-c64');
+        document.body.classList.remove('theme-matrix', 'theme-dos', 'theme-c64', 'theme-amiga', 'theme-apple2', 'theme-zxspectrum');
         // Custom tema ise CSS değişkenlerini ayarla
         if (theme === 'custom') {
             const custom = JSON.parse(localStorage.getItem('customTheme') || '{}');
@@ -500,17 +508,68 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Komut işleme fonksiyonu
+    // Kullanıcıdan gelen komutu analiz eder ve uygun çıktıyı terminale ekler
     function processCommand(command) {
         const output = document.createElement('div');
         const [cmd, ...args] = command.split(' ');
 
         if (cmd in commands && cmd !== 'notes') {
             output.innerHTML = commands[cmd];
+        } else if (cmd === 'ls') {
+            output.innerHTML = `<pre>about.txt  projects.txt  notes.md  guestbook.log  README.md</pre>`;
+        } else if (cmd === 'cat') {
+            const file = args[0];
+            if (!file) {
+                output.innerHTML = `<p>Kullanım: cat &lt;dosya_adı&gt;</p>`;
+            } else if (file === 'about.txt') {
+                output.innerHTML = commands.about;
+            } else if (file === 'projects.txt') {
+                output.innerHTML = commands.projects;
+            } else if (file === 'notes.md') {
+                output.innerHTML = `<pre>${notesData.map((n, i) => `${i+1}. ${n.title} (${n.date})`).join('\n')}</pre>`;
+            } else if (file === 'guestbook.log') {
+                output.innerHTML = '<p>Mesajlar yükleniyor...</p>';
+                consoleOutput.appendChild(output);
+                listGuestbookMessages().then(({ data, error }) => {
+                    if (error) {
+                        output.innerHTML = '<p>Hata oluştu.</p>';
+                    } else if (data && data.length) {
+                        output.innerHTML = '<ul>' + data.map(m => `<li>${m.message} <span style="color:gray;font-size:0.8em;">${new Date(m.created_at).toLocaleString()}</span></li>`).join('') + '</ul>';
+                    } else {
+                        output.innerHTML = '<p>Henüz mesaj yok.</p>';
+                    }
+                });
+                return;
+            } else if (file === 'README.md') {
+                output.innerHTML = `<pre>MajevSong OS - Retro Terminal Web Uygulaması\nKomutlar için 'help' yazın.</pre>`;
+            } else {
+                output.innerHTML = `<p>'${file}' bulunamadı.</p>`;
+            }
+        } else if (cmd === 'echo') {
+            output.innerHTML = `<pre>${args.join(' ')}</pre>`;
+        } else if (cmd === 'whoami') {
+            output.innerHTML = `<pre>Guest</pre>`;
+        } else if (cmd === 'date') {
+            output.innerHTML = `<pre>${new Date().toLocaleString('tr-TR')}</pre>`;
         } else if (cmd === 'notes') {
             if (args[0] === 'view' && args[1]) {
                 const idx = parseInt(args[1], 10) - 1;
                 if (!isNaN(idx) && notesData[idx]) {
-                    output.innerHTML = `<div class='note-detail'>${notesData[idx].content}<div style='color:gray;font-size:0.9em;'>${notesData[idx].date}</div></div>`;
+                    // Eğer notun markdown dosyası varsa onu yükle
+                    const mdPath = `notes/not${idx+1}.md`;
+                    fetch(mdPath)
+                        .then(r => r.ok ? r.text() : null)
+                        .then(md => {
+                            if (md) {
+                                const converter = new showdown.Converter();
+                                const html = converter.makeHtml(md);
+                                output.innerHTML = `<div class='note-detail'>${html}<div style='color:gray;font-size:0.9em;'>${notesData[idx].date}</div></div>`;
+                            } else {
+                                output.innerHTML = `<div class='note-detail'>${notesData[idx].content}<div style='color:gray;font-size:0.9em;'>${notesData[idx].date}</div></div>`;
+                            }
+                        });
+                    consoleOutput.appendChild(output);
+                    return;
                 } else {
                     output.innerHTML = `<p>Geçersiz not numarası. 'notes' ile mevcut notları görebilirsin.</p>`;
                 }
@@ -546,6 +605,14 @@ document.addEventListener('DOMContentLoaded', () => {
             consoleOutput.appendChild(output);
             fetchGithubActivity(output);
             return;
+        } else if (cmd === 'theme' && ['amiga','apple2','zxspectrum'].includes(args[0])) {
+            if (applyTheme(args[0])) {
+                output.innerHTML = `<p>${args[0].toUpperCase()} teması uygulandı.</p>`;
+            } else {
+                output.innerHTML = `<p>Tema uygulanamadı.</p>`;
+            }
+            consoleOutput.appendChild(output);
+            return;
         } else if (cmd === 'theme' && args[0] === 'custom') {
             showCustomThemeForm(output);
         } else if (cmd === 'matrix') {
@@ -571,16 +638,42 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         } else if (cmd === 'guestbook' && args[0] === 'add') {
             const msg = args.slice(1).join(' ');
-            if (!msg) {
-                output.innerHTML = '<p>Mesaj boş olamaz.</p>';
-            } else {
-                output.innerHTML = '<p>Mesaj ekleniyor...</p>';
+            // Rate limit kontrolü (1dk)
+            const lastTime = localStorage.getItem('guestbook_last_msg_time');
+            const now = Date.now();
+            if (lastTime && now - parseInt(lastTime, 10) < 60000) {
+                output.innerHTML = '<p>Çok hızlı mesaj gönderiyorsun! Lütfen 1 dakika bekle.</p>';
                 consoleOutput.appendChild(output);
-                addGuestbookMessage(msg).then(({ error }) => {
-                    output.innerHTML = error ? '<p>Hata oluştu.</p>' : '<p>Mesaj kaydedildi!</p>';
-                });
                 return;
             }
+            if (!msg) {
+                output.innerHTML = '<p>Mesaj boş olamaz.</p>';
+                consoleOutput.appendChild(output);
+                return;
+            }
+            // Basit captcha sorusu oluştur
+            const a = Math.floor(Math.random()*10)+1;
+            const b = Math.floor(Math.random()*10)+1;
+            const captchaDiv = document.createElement('div');
+            captchaDiv.innerHTML = `<form id='captcha-form'><label>${a} + ${b} = ? <input type='number' id='captcha-answer' required style='width:60px;'></label> <button type='submit'>Gönder</button></form><div id='captcha-msg' style='color:red;margin-top:6px;'></div>`;
+            consoleOutput.appendChild(captchaDiv);
+            document.getElementById('captcha-answer').focus();
+            document.getElementById('captcha-form').onsubmit = function(e) {
+                e.preventDefault();
+                const val = parseInt(document.getElementById('captcha-answer').value, 10);
+                if (val === a + b) {
+                    captchaDiv.innerHTML = '<p>Mesaj ekleniyor...</p>';
+                    addGuestbookMessage(msg).then(({ error }) => {
+                        captchaDiv.innerHTML = error ? '<p>Hata oluştu.</p>' : '<p>Mesaj kaydedildi!</p>';
+                        if (!error) localStorage.setItem('guestbook_last_msg_time', Date.now().toString());
+                    });
+                } else {
+                    document.getElementById('captcha-msg').textContent = 'Yanlış cevap! Lütfen tekrar deneyin.';
+                    document.getElementById('captcha-answer').value = '';
+                    document.getElementById('captcha-answer').focus();
+                }
+            };
+            return;
         } else if (cmd === 'guestbook' && args[0] === 'list') {
             output.innerHTML = '<p>Mesajlar yükleniyor...</p>';
             consoleOutput.appendChild(output);
@@ -719,19 +812,60 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // GitHub aktivitesi çekme fonksiyonu
+    // Son commit, açık issue ve pull request'leri getirir, hata durumunda kullanıcıyı bilgilendirir
     function fetchGithubActivity(outputDiv) {
         const username = 'MajevSong'; // Buraya kendi GitHub kullanıcı adını yazabilirsin
         fetch(`https://api.github.com/users/${username}/repos?sort=pushed`)
             .then(r => r.json())
-            .then(data => {
+            .then(async data => {
                 if (!Array.isArray(data)) throw new Error('API limiti veya hata');
                 const latest = data.slice(0, 5);
+                // Her repo için son commit mesajını çek
+                const repoCommits = await Promise.all(latest.map(async repo => {
+                    try {
+                        const commitRes = await fetch(`https://api.github.com/repos/${username}/${repo.name}/commits?per_page=1`);
+                        const commitData = await commitRes.json();
+                        const commit = Array.isArray(commitData) && commitData[0] ? commitData[0] : null;
+                        return {
+                            name: repo.name,
+                            url: repo.html_url,
+                            pushed_at: repo.pushed_at,
+                            commitMsg: commit ? commit.commit.message : 'Commit bulunamadı',
+                            commitDate: commit ? commit.commit.author.date : '',
+                            commitUrl: commit ? commit.html_url : repo.html_url
+                        };
+                    } catch {
+                        return {
+                            name: repo.name,
+                            url: repo.html_url,
+                            pushed_at: repo.pushed_at,
+                            commitMsg: 'Commit alınamadı',
+                            commitDate: '',
+                            commitUrl: repo.html_url
+                        };
+                    }
+                }));
+                // Son 3 açık issue ve pull request'i getir
+                const mainRepo = latest[0]?.name || '';
+                let issues = [], pulls = [];
+                if (mainRepo) {
+                    try {
+                        const issuesRes = await fetch(`https://api.github.com/repos/${username}/${mainRepo}/issues?state=open&per_page=3`);
+                        const issuesData = await issuesRes.json();
+                        issues = Array.isArray(issuesData) ? issuesData.filter(i => !i.pull_request) : [];
+                        const pullsRes = await fetch(`https://api.github.com/repos/${username}/${mainRepo}/pulls?state=open&per_page=3`);
+                        const pullsData = await pullsRes.json();
+                        pulls = Array.isArray(pullsData) ? pullsData : [];
+                    } catch {}
+                }
                 outputDiv.innerHTML = `<p><strong>Son GitHub Repo Aktiviteleri:</strong></p><ul>` +
-                    latest.map(repo => `<li><a href='${repo.html_url}' target='_blank'>${repo.name}</a> <span style='color:gray;font-size:0.9em;'>(${repo.pushed_at.slice(0,10)})</span></li>`).join('') +
-                    `</ul>`;
+                    repoCommits.map(r => `<li><a href='${r.url}' target='_blank'>${r.name}</a><br><span style='color:gray;font-size:0.9em;'>${r.pushed_at.slice(0,10)}</span><br><span style='color:#ffb900;font-size:0.97em;'>${r.commitMsg}</span><br><span style='color:gray;font-size:0.9em;'>${r.commitDate ? new Date(r.commitDate).toLocaleString('tr-TR') : ''}</span></li>`).join('') +
+                    `</ul>` +
+                    (issues.length ? `<p><strong>Açık Issue'lar:</strong></p><ul>` + issues.map(i => `<li><a href='${i.html_url}' target='_blank'>#${i.number}: ${i.title}</a> <span style='color:gray;font-size:0.9em;'>${new Date(i.created_at).toLocaleString('tr-TR')}</span></li>`).join('') + `</ul>` : '') +
+                    (pulls.length ? `<p><strong>Açık Pull Request'ler:</strong></p><ul>` + pulls.map(p => `<li><a href='${p.html_url}' target='_blank'>#${p.number}: ${p.title}</a> <span style='color:gray;font-size:0.9em;'>${new Date(p.created_at).toLocaleString('tr-TR')}</span></li>`).join('') + `</ul>` : '');
             })
-            .catch(() => {
-                outputDiv.innerHTML = `<p>GitHub API limiti aşıldı veya bir hata oluştu. Daha sonra tekrar deneyin.</p>`;
+            .catch((e) => {
+                outputDiv.innerHTML = `<p>GitHub API limiti aşıldı veya bir hata oluştu.<br>Hata: ${e.message || e}</p><p>Daha sonra tekrar deneyin veya <a href='https://github.com/${username}' target='_blank'>GitHub profilimi</a> ziyaret edin.</p>`;
             });
     }
 

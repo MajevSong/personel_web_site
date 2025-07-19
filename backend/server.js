@@ -78,7 +78,7 @@ app.post('/api/chatbot', async (req, res) => {
   } catch (err) {
     console.error('Genel hata:', err);
     res.status(500).json({ cevap: `Sunucu hatası: ${err.message}` });
-  }
+    }
 });
 
 // Chatbot durumunu kontrol et
