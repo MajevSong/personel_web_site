@@ -275,6 +275,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const out = document.createElement('div');
             out.innerHTML = '<p>Admin oturumu kapatıldı.</p>';
             consoleOutput.appendChild(out);
+            // Prompt'u tekrar görünür yap ve input'a odaklan
+            const promptElement = document.querySelector('.prompt');
+            const terminalInput = document.getElementById('terminal-input');
+            if (promptElement) {
+                promptElement.style.visibility = 'visible';
+                if (terminalInput) terminalInput.focus();
+            }
         };
         document.getElementById('admin-refresh-guestbook').onclick = loadAdminGuestbookList;
         loadAdminGuestbookList();
@@ -961,6 +968,19 @@ document.addEventListener('DOMContentLoaded', () => {
             terminalInput.focus();
         }
     }
+
+    // --- Otomatik Matrix Komutu (10 sn işlem yoksa) ---
+    let idleTimer = null;
+    function resetIdleTimer() {
+        if (idleTimer) clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+            processCommand('matrix');
+        }, 10000);
+    }
+    ['mousemove','keydown','mousedown','touchstart','scroll'].forEach(evt => {
+        window.addEventListener(evt, resetIdleTimer, true);
+    });
+    resetIdleTimer();
 
     // --- Event Listeners ---
 
