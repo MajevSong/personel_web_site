@@ -89,6 +89,47 @@
   --crt-glow: 0 0 8px #00d7ff, 0 0 2px #ff0040;
 }
 
+:root[data-theme='matrix'] {
+  --bg: #0a0f0a;
+  --fg: #00ff41;
+  --accent: #00ffea;
+  --prompt: #00ff41;
+  --card-bg: #111c11cc;
+  --link: #00ffea;
+  --crt-glow: 0 0 8px #00ff41, 0 0 2px #00ffea;
+}
+
+/* Matrix teması için terminal overlay */
+#console-container {
+  position: relative;
+}
+#console-container::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 1;
+  pointer-events: none;
+  border-radius: 12px;
+}
+#console {
+  position: relative;
+  z-index: 2;
+}
+
+/* Matrix kod yağmuru efektinin yoğunluğunu ve opaklığını azalt */
+.matrix-rain-canvas {
+  opacity: 0.25 !important;
+  filter: blur(0.5px) brightness(0.7);
+  pointer-events: none;
+}
+
+/* Matrix teması için yazı kontrastı */
+[data-theme='matrix'] #console, [data-theme='matrix'] .prompt, [data-theme='matrix'] input {
+  color: #00ff41 !important;
+  text-shadow: 0 0 2px #00ff41, 0 0 8px #000;
+}
+
 body {
   background-color: var(--bg-color);
   color: var(--text-color);
