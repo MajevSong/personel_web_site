@@ -159,6 +159,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!availableThemes.includes(theme)) theme = 'default';
       document.documentElement.setAttribute('data-theme', theme);
       localStorage.setItem('theme', theme);
+      // Matrix kod yağmuru sadece matrix temasında aktif olsun
+      const bgCanvas = document.getElementById('matrix-bg-canvas');
+      if (theme === 'matrix') {
+        if (!bgCanvas) startMatrixBgRain();
+      } else {
+        if (bgCanvas) stopMatrixBgRain();
+      }
     }
 
     // Supabase bağlantısı (CDN ile)
