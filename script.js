@@ -910,8 +910,37 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    // --- Otomatik Matrix Komutu (10 sn işlem yoksa, hareket gelene kadar devam) ---
+    let idleTimer = null;
+    let isIdleMatrixActive = false;
+    function startIdleMatrix() {
+        if (!isIdleMatrixActive) {
+            isIdleMatrixActive = true;
+            startMatrixRain(true); // idle için özel flag
+        }
+    }
+    function stopIdleMatrix() {
+        if (isIdleMatrixActive) {
+            isIdleMatrixActive = false;
+            const canvas = document.getElementById('matrix-canvas');
+            if (canvas) canvas.remove();
+        }
+    }
+    function resetIdleTimer() {
+        if (idleTimer) clearTimeout(idleTimer);
+        stopIdleMatrix();
+        idleTimer = setTimeout(() => {
+            startIdleMatrix();
+        }, 10000);
+    }
+    ['mousemove','keydown','mousedown','touchstart','scroll'].forEach(evt => {
+        window.addEventListener(evt, resetIdleTimer, true);
+    });
+    resetIdleTimer();
+
     // Matrix yağmuru animasyonu (easter egg)
-    function startMatrixRain() {
+    // idleMode=true ise, kullanıcı hareket edene kadar canvas ekranda kalır
+    function startMatrixRain(idleMode) {
         if (document.getElementById('matrix-canvas')) return;
         const canvas = document.createElement('canvas');
         canvas.id = 'matrix-canvas';
@@ -941,10 +970,25 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         let interval = setInterval(drawMatrix, 50);
-        setTimeout(() => {
-            clearInterval(interval);
-            canvas.remove();
-        }, 3500);
+        if (!idleMode) {
+            setTimeout(() => {
+                clearInterval(interval);
+                canvas.remove();
+            }, 3500);
+        } else {
+            // idle modunda, canvas kullanıcı hareket edene kadar kalır
+            const stopOnActivity = () => {
+                clearInterval(interval);
+                if (canvas) canvas.remove();
+                isIdleMatrixActive = false;
+                ['mousemove','keydown','mousedown','touchstart','scroll'].forEach(evt => {
+                    window.removeEventListener(evt, stopOnActivity, true);
+                });
+            };
+            ['mousemove','keydown','mousedown','touchstart','scroll'].forEach(evt => {
+                window.addEventListener(evt, stopOnActivity, true);
+            });
+        }
     }
 
     // Ortama göre API adresini belirle
@@ -968,19 +1012,6 @@ document.addEventListener('DOMContentLoaded', () => {
             terminalInput.focus();
         }
     }
-
-    // --- Otomatik Matrix Komutu (10 sn işlem yoksa) ---
-    let idleTimer = null;
-    function resetIdleTimer() {
-        if (idleTimer) clearTimeout(idleTimer);
-        idleTimer = setTimeout(() => {
-            processCommand('matrix');
-        }, 10000);
-    }
-    ['mousemove','keydown','mousedown','touchstart','scroll'].forEach(evt => {
-        window.addEventListener(evt, resetIdleTimer, true);
-    });
-    resetIdleTimer();
 
     // --- Event Listeners ---
 
