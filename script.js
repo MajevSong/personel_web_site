@@ -168,386 +168,33 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // Supabase bağlantısı (CDN ile)
-    const SUPABASE_URL = window.ENV && window.ENV.SUPABASE_URL;
-    const SUPABASE_ANON_KEY = window.ENV && window.ENV.SUPABASE_ANON_KEY;
-    let supabase = null;
-    if (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
-      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    }
+      // Statik veri depoları
+      let chatbotData = [];
+      let guestbookMessages = [];
 
-    async function addGuestbookMessage(message) {
-      if (!supabase) return { error: 'Supabase yüklenemedi.' };
-      const { data, error } = await supabase
-        .from('guestbook')
-        .insert([{ message }]);
-      return { data, error };
-    }
-
-    async function listGuestbookMessages() {
-      if (!supabase) return { error: 'Supabase yüklenemedi.' };
-      const { data, error } = await supabase
-        .from('guestbook')
-        .select('*')
-        .order('created_at', { ascending: false });
-      return { data, error };
-    }
-
-    let isAdmin = false;
-    let adminLoginAttempts = 0;
-
-    // Admin login fonksiyonu
-    async function adminLoginPrompt() {
-        // Terminal input ve diğer komutları kilitle
-        const promptDiv = document.querySelector('.prompt');
-        if (promptDiv) promptDiv.style.display = 'none';
-        const origBodyClick = document.body.onclick;
-        document.body.onclick = null;
-        return new Promise((resolve) => {
-            const loginDiv = document.createElement('div');
-            loginDiv.innerHTML = `
-                <div style="max-width:340px;margin:40px auto;padding:32px 24px;background:rgba(20,40,20,0.97);border:2px solid var(--border-color,#0f0);border-radius:12px;box-shadow:0 0 24px #000;">
-                    <h2 style="text-align:center;color:var(--header-color,#0f0);margin-bottom:18px;">🔒 Admin Girişi</h2>
-                    <form id="admin-login-form" style="display:flex;flex-direction:column;gap:14px;">
-                        <label style="font-size:1.1em;">Kullanıcı Adı
-                            <input type="text" name="username" required autocomplete="off" style="width:100%;padding:8px 10px;font-size:1.1em;border-radius:6px;border:1px solid var(--border-color,#0f0);background:#181c18;color:var(--text-color,#0f0);margin-top:4px;" />
-                        </label>
-                        <label style="font-size:1.1em;">Şifre
-                            <input type="password" name="password" required autocomplete="off" style="width:100%;padding:8px 10px;font-size:1.1em;border-radius:6px;border:1px solid var(--border-color,#0f0);background:#181c18;color:var(--text-color,#0f0);margin-top:4px;letter-spacing:2px;" />
-                        </label>
-                        <button type="submit" style="margin-top:10px;padding:10px 0;font-size:1.1em;background:var(--border-color,#0f0);color:var(--bg-color,#111);border:none;border-radius:6px;cursor:pointer;">Giriş Yap</button>
-                    </form>
-                    <div id="admin-login-msg" style="margin-top:16px;text-align:center;color:#f55;font-weight:bold;"></div>
-                </div>
-            `;
-            consoleOutput.appendChild(loginDiv);
-            const form = loginDiv.querySelector('#admin-login-form');
-            const msgDiv = loginDiv.querySelector('#admin-login-msg');
-            form.username.focus();
-            form.onsubmit = async function(e) {
-                e.preventDefault();
-                const username = form.username.value.trim();
-                const password = form.password.value.trim();
-                // Supabase'den admin kontrolü
-                if (!supabase) {
-                    msgDiv.textContent = 'Supabase bağlantı hatası.';
-                    return;
-                }
-                const { data, error } = await supabase
-                    .from('admins')
-                    .select('*')
-                    .eq('username', username)
-                    .eq('password', password)
-                    .maybeSingle();
-                if (error) {
-                    msgDiv.textContent = 'Giriş sırasında hata oluştu.';
-                } else if (data) {
-                    msgDiv.style.color = '#0f0';
-                    msgDiv.textContent = 'Giriş başarılı! Admin paneli açılıyor...';
-                    isAdmin = true;
-                    setTimeout(() => {
-                        loginDiv.remove();
-                        if (promptDiv) promptDiv.style.display = '';
-                        document.body.onclick = origBodyClick;
-                        adminLoginAttempts = 0;
-                        showAdminPanel();
-                    }, 1000);
-                    resolve(true);
-                } else {
-                    adminLoginAttempts++;
-                    msgDiv.textContent = `Hatalı kullanıcı adı veya şifre. (${adminLoginAttempts}/3)`;
-                    if (adminLoginAttempts >= 3) {
-                        msgDiv.textContent = 'Çok fazla hatalı giriş! Siteye erişiminiz engellendi.';
-                        setTimeout(() => {
-                            window.location.href = 'https://www.google.com';
-                        }, 1200);
-                    }
-                }
-            };
+      // JSON verilerini yükle
+      fetch('veri.json')
+        .then(r => r.json())
+        .then(data => { chatbotData = data; });
+      fetch('guestbook.json')
+        .then(r => r.json())
+        .then(data => {
+          const stored = JSON.parse(localStorage.getItem('guestbook_messages') || '[]');
+          guestbookMessages = data.concat(stored);
         });
-    }
 
-    function showAdminPanel() {
-        if (document.getElementById('admin-panel')) return; // Panel zaten açıksa tekrar açma
-        const panel = document.createElement('div');
-        panel.id = 'admin-panel';
-        panel.innerHTML = `
-            <div style="border:2px solid var(--border-color,#0f0);padding:16px;margin:16px 0;background:rgba(0,255,0,0.05);border-radius:12px;box-shadow:0 4px 24px 0 rgba(0,0,0,0.15);max-width:350px;">
-                <h3 style='margin-top:0;font-size:1.15em;'>Admin Panel</h3>
-                <button id="admin-logout-btn" style="margin-bottom:8px;">Çıkış Yap</button>
-                <button id="admin-refresh-guestbook" style="margin-bottom:8px;">Guestbook Mesajlarını Yenile</button>
-                <div id="admin-guestbook-list" style="margin-bottom:10px;">Yükleniyor...</div>
-                <div id="chatbot-panel" style="margin-top:12px;padding:12px 8px 8px 8px;background:rgba(0,0,0,0.08);border-radius:8px;box-shadow:0 2px 8px 0 rgba(0,0,0,0.08);">
-                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-                    <h4 style="margin:0;font-size:1em;">🤖 Chatbot</h4>
-                    <button id="chatbot-close" style="background:#e74c3c;color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:0.9em;">Kapat</button>
-                  </div>
-                  <div style="display:flex;gap:6px;align-items:center;">
-                    <input type="text" id="chatbot-question" placeholder="Sorunuzu yazın..." style="flex:1;padding:6px 8px;border:1.2px solid var(--border-color,#0f0);border-radius:5px;font-size:0.97em;background:#181818;color:var(--text-color);outline:none;transition:border 0.2s;min-width:0;">
-                    <button id="chatbot-send" style="padding:6px 12px;background:var(--header-color,#0f0);color:#222;border:none;border-radius:5px;font-weight:bold;cursor:pointer;font-size:0.97em;transition:background 0.2s;">Sor</button>
-                  </div>
-                  <div id="chatbot-answer" style="margin-top:10px;color:var(--text-color);min-height:20px;font-size:0.97em;"></div>
-                </div>
-                <div id="admin-chatbot-knowledge" style="margin-top:18px;padding:10px 6px 6px 6px;background:rgba(0,0,0,0.08);border-radius:8px;box-shadow:0 2px 8px 0 rgba(0,0,0,0.08);">
-                  <h4 style="margin:0 0 8px 0;font-size:1em;">📚 Chatbot Bilgi Yönetimi</h4>
-                  <form id="add-knowledge-form" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
-                    <input type="text" id="knowledge-question" placeholder="Soru" required style="padding:6px 8px;border-radius:4px;border:1px solid var(--border-color,#0f0);background:#181818;color:var(--text-color);">
-                    <textarea id="knowledge-answer" placeholder="Cevap" required rows="2" style="padding:6px 8px;border-radius:4px;border:1px solid var(--border-color,#0f0);background:#181818;color:var(--text-color);"></textarea>
-                    <button type="submit" style="padding:6px 0;background:var(--header-color,#0f0);color:#222;border:none;border-radius:4px;font-weight:bold;cursor:pointer;">Ekle</button>
-                  </form>
-                  <div id="knowledge-list">Yükleniyor...</div>
-                </div>
-                <div id="admin-chatbot-logs" style="margin-top:18px;padding:10px 6px 6px 6px;background:rgba(0,0,0,0.08);border-radius:8px;box-shadow:0 2px 8px 0 rgba(0,0,0,0.08);">
-                  <h4 style="margin:0 0 8px 0;font-size:1em;">📝 Chatbot Logları</h4>
-                  <div id="chatbot-logs-list">Yükleniyor...</div>
-                </div>
-            </div>
-        `;
-        consoleOutput.appendChild(panel);
-        document.getElementById('admin-logout-btn').onclick = () => {
-            isAdmin = false;
-            panel.remove();
-            const out = document.createElement('div');
-            out.innerHTML = '<p>Admin oturumu kapatıldı.</p>';
-            consoleOutput.appendChild(out);
-            // Prompt'u tekrar görünür yap ve input'a odaklan
-            const promptElement = document.querySelector('.prompt');
-            const terminalInput = document.getElementById('terminal-input');
-            if (promptElement) {
-                promptElement.style.visibility = 'visible';
-                if (terminalInput) terminalInput.focus();
-            }
-        };
-        document.getElementById('admin-refresh-guestbook').onclick = loadAdminGuestbookList;
-        loadAdminGuestbookList();
-        // Chatbot event handler (önceki kodun devamı)
-        const chatbotInput = document.getElementById('chatbot-question');
-        const chatbotSend = document.getElementById('chatbot-send');
-        const chatbotAnswer = document.getElementById('chatbot-answer');
-        const chatbotClose = document.getElementById('chatbot-close');
-        // Chatbot açıldığında terminal prompt'unu gizle
-        const promptElement = document.querySelector('.prompt');
-        if (promptElement) {
-          promptElement.style.visibility = 'hidden';
-        }
-        // chatbotInput.focus(); // Otomatik odak kaldırıldı
-        chatbotSend.onclick = async () => {
-          const soru = chatbotInput.value.trim();
-          if (!soru) {
-            chatbotAnswer.textContent = "Lütfen bir soru yazın.";
-            chatbotInput.focus();
-            return;
-          }
-          chatbotAnswer.textContent = "Yanıt bekleniyor...";
-          chatbotInput.disabled = true;
-          chatbotSend.disabled = true;
-          try {
-            const response = await fetch(getApiBaseUrl() + '/api/chatbot', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ soru })
-            });
-            const data = await response.json();
-            chatbotAnswer.textContent = data.cevap;
-          } catch (e) {
-            chatbotAnswer.textContent = "Bağlantı hatası!";
-          }
-          chatbotInput.disabled = false;
-          chatbotSend.disabled = false;
-          chatbotInput.value = '';
-          setTimeout(() => chatbotInput.focus(), 50);
-        };
-        chatbotInput.addEventListener('keydown', function(e) {
-          if (e.key === 'Enter') chatbotSend.click();
-        });
-        chatbotClose.onclick = () => {
-          document.getElementById('chatbot-panel').remove();
-          // Chatbot kapatıldığında terminal prompt'u tekrar göster
-          const promptElement = document.querySelector('.prompt');
-          if (promptElement) {
-            promptElement.style.visibility = 'visible';
-            document.getElementById('terminal-input').focus();
-          }
-        };
-        // Chatbot Bilgi Yönetimi
-        loadKnowledgeList();
-        let addKnowledgeFormHandler = null;
-        // Bilgiye Ekle butonundan gelen log id'sini saklamak için
-        let pendingLogId = null;
-        async function addKnowledgeFormSubmit(e) {
-          e.preventDefault();
-          const question = document.getElementById('knowledge-question').value.trim();
-          const answer = document.getElementById('knowledge-answer').value.trim();
-          if (!question || !answer) return;
-          const { error } = await supabase
-            .from('chatbot_knowledge')
-            .insert([{ question, answer }]);
-          if (!error) {
-            // Eğer bir logdan geldiyse, logun cevabını da güncelle
-            if (pendingLogId) {
-              const { error: logUpdateError } = await supabase
-                .from('chatbot_logs')
-                .update({ answer })
-                .eq('id', pendingLogId);
-              if (logUpdateError) {
-                alert('Log güncellenemedi! Policy veya bağlantı hatası olabilir.');
-              }
-              pendingLogId = null;
-              await loadChatbotLogs(); // await ekle, asenkron çakışma olmasın
-            }
-            document.getElementById('knowledge-question').value = '';
-            document.getElementById('knowledge-answer').value = '';
-            loadKnowledgeList();
-          } else {
-            alert('Kayıt eklenemedi!');
-          }
-        }
-        document.getElementById('add-knowledge-form').onsubmit = addKnowledgeFormSubmit;
-        addKnowledgeFormHandler = addKnowledgeFormSubmit;
-        async function loadKnowledgeList() {
-          const listDiv = document.getElementById('knowledge-list');
-          listDiv.innerHTML = 'Yükleniyor...';
-          const { data, error } = await supabase
-            .from('chatbot_knowledge')
-            .select('*')
-            .order('created_at', { ascending: false });
-          if (error) {
-            listDiv.innerHTML = '<p>Hata oluştu.</p>';
-          } else if (data && data.length) {
-            listDiv.innerHTML = '<ul style="padding-left:0;list-style:none;">' + data.map(k => `
-              <li style="margin-bottom:8px;background:rgba(0,255,0,0.04);padding:6px 4px;border-radius:6px;">
-                <b>Soru:</b> <span style="color:#0f0;">${k.question}</span><br>
-                <b>Cevap:</b> <span style="color:#fff;">${k.answer}</span><br>
-                <button data-id="${k.id}" class="edit-knowledge-btn" style="margin-right:6px;">Düzenle</button>
-                <button data-id="${k.id}" class="delete-knowledge-btn">Sil</button>
-              </li>`).join('') + '</ul>';
-            // Silme
-            listDiv.querySelectorAll('.delete-knowledge-btn').forEach(btn => {
-              btn.onclick = async function() {
-                const id = btn.getAttribute('data-id');
-                btn.disabled = true;
-                btn.textContent = 'Siliniyor...';
-                const { error } = await supabase
-                  .from('chatbot_knowledge')
-                  .delete()
-                  .eq('id', id);
-                if (!error) {
-                  btn.parentElement.remove();
-                } else {
-                  btn.textContent = 'Hata';
-                }
-              };
-            });
-            // Düzenleme
-            listDiv.querySelectorAll('.edit-knowledge-btn').forEach(btn => {
-              btn.onclick = function() {
-                const id = btn.getAttribute('data-id');
-                const item = data.find(k => k.id == id);
-                if (!item) return;
-                document.getElementById('knowledge-question').value = item.question;
-                document.getElementById('knowledge-answer').value = item.answer;
-                // Güncelleme için submit fonksiyonunu değiştir
-                document.getElementById('add-knowledge-form').onsubmit = async function(e) {
-                  e.preventDefault();
-                  const newQ = document.getElementById('knowledge-question').value.trim();
-                  const newA = document.getElementById('knowledge-answer').value.trim();
-                  if (!newQ || !newA) return;
-                  const { error } = await supabase
-                    .from('chatbot_knowledge')
-                    .update({ question: newQ, answer: newA, updated_at: new Date().toISOString() })
-                    .eq('id', id);
-                  if (!error) {
-                    document.getElementById('knowledge-question').value = '';
-                    document.getElementById('knowledge-answer').value = '';
-                    loadKnowledgeList();
-                    // Submit fonksiyonunu tekrar eklemeye çevir
-                    document.getElementById('add-knowledge-form').onsubmit = addKnowledgeFormHandler;
-                  } else {
-                    alert('Güncelleme başarısız!');
-                  }
-                };
-              };
-            });
-          } else {
-            listDiv.innerHTML = '<p>Henüz kayıt yok.</p>';
-          }
-        }
-        loadChatbotLogs();
-        async function loadChatbotLogs() {
-          const logsDiv = document.getElementById('chatbot-logs-list');
-          logsDiv.innerHTML = 'Yükleniyor...';
-          if (!supabase) {
-            logsDiv.innerHTML = '<p>Supabase bağlantı hatası.</p>';
-            return;
-          }
-          const { data, error } = await supabase
-            .from('chatbot_logs')
-            .select('*', { head: false })
-            .order('created_at', { ascending: false })
-            .limit(50);
-          if (error) {
-            logsDiv.innerHTML = '<p>Hata oluştu.</p>';
-          } else if (data && data.length) {
-            logsDiv.innerHTML = '<ul style="padding-left:0;list-style:none;max-height:300px;overflow-y:auto;">' + data.map(log => `
-              <li style="margin-bottom:8px;background:rgba(0,255,0,0.04);padding:6px 4px;border-radius:6px;">
-                <b>Soru:</b> <span style="color:#0f0;">${log.question}</span><br>
-                <b>Cevap:</b> <span style="color:#fff;">${log.answer}</span><br>
-                <span style="color:gray;font-size:0.9em;">${new Date(log.created_at).toLocaleString()}</span>
-                ${log.answer === 'Üzgünüm, bu soruya henüz bir cevabım yok.' ? `<button class="log-to-knowledge-btn" data-question="${encodeURIComponent(log.question)}" data-logid="${log.id}" style="margin-left:8px;">Bilgiye Ekle</button>` : ''}
-              </li>`).join('') + '</ul>';
-            // Bilgiye Ekle butonları için event ekle
-            logsDiv.querySelectorAll('.log-to-knowledge-btn').forEach(btn => {
-              btn.onclick = function() {
-                const question = decodeURIComponent(btn.getAttribute('data-question'));
-                const logId = btn.getAttribute('data-logid');
-                document.getElementById('knowledge-question').value = question;
-                document.getElementById('knowledge-answer').value = '';
-                document.getElementById('knowledge-answer').focus();
-                pendingLogId = logId;
-              };
-            });
-          } else {
-            logsDiv.innerHTML = '<p>Henüz log yok.</p>';
-          }
-        }
-    }
+      function addGuestbookMessage(message) {
+        const entry = { message, created_at: new Date().toISOString() };
+        guestbookMessages.unshift(entry);
+        const stored = JSON.parse(localStorage.getItem('guestbook_messages') || '[]');
+        stored.unshift(entry);
+        localStorage.setItem('guestbook_messages', JSON.stringify(stored));
+        return Promise.resolve({ error: null });
+      }
 
-    async function loadAdminGuestbookList() {
-        const listDiv = document.getElementById('admin-guestbook-list');
-        if (!listDiv) return;
-        listDiv.innerHTML = 'Yükleniyor...';
-        const { data, error } = await listGuestbookMessages();
-        if (error) {
-            listDiv.innerHTML = '<p>Hata oluştu.</p>';
-        } else if (data && data.length) {
-            listDiv.innerHTML = '<ul>' + data.map(m => `<li>${m.message} <span style="color:gray;font-size:0.8em;">${new Date(m.created_at).toLocaleString()}</span> <button data-id="${m.id}" class="admin-delete-btn">Sil</button></li>`).join('') + '</ul>';
-            // Silme butonlarına event ekle
-            listDiv.querySelectorAll('.admin-delete-btn').forEach(btn => {
-                btn.onclick = async function() {
-                    const id = btn.getAttribute('data-id');
-                    btn.disabled = true;
-                    btn.textContent = 'Siliniyor...';
-                    const { error } = await deleteGuestbookMessage(id);
-                    if (!error) {
-                        btn.parentElement.remove();
-                    } else {
-                        btn.textContent = 'Hata';
-                    }
-                };
-            });
-        } else {
-            listDiv.innerHTML = '<p>Henüz mesaj yok.</p>';
-        }
-    }
-
-    async function deleteGuestbookMessage(id) {
-        if (!supabase) return { error: 'Supabase yok' };
-        const { error } = await supabase
-            .from('guestbook')
-            .delete()
-            .eq('id', id);
-        return { error };
-    }
+      function listGuestbookMessages() {
+        return Promise.resolve({ data: guestbookMessages, error: null });
+      }
 
     // Komut işleme fonksiyonu
     // Kullanıcıdan gelen komutu analiz eder ve uygun çıktıyı terminale ekler
@@ -784,16 +431,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
             return;
-        } else if (cmd === 'admin' && args[0] === 'login') {
-            if (isAdmin || document.getElementById('admin-panel')) {
-                output.innerHTML = '<p>Zaten admin yetkiniz var. Admin paneli açık.</p>';
-                consoleOutput.appendChild(output);
-                return;
-            }
-            output.innerHTML = '<p>Admin girişi başlatılıyor...</p>';
-            consoleOutput.appendChild(output);
-            adminLoginPrompt();
-            return;
         } else if (cmd === 'chatbot') {
           const msg = args.join(' ');
           if (!msg) {
@@ -801,16 +438,9 @@ document.addEventListener('DOMContentLoaded', () => {
             consoleOutput.appendChild(output);
             return;
           }
-          output.innerHTML = '<p>Yanıt bekleniyor...</p>';
+          const entry = chatbotData.find(q => q.soru.toLowerCase() === msg.toLowerCase());
+          output.innerHTML = `<p>${entry ? entry.cevap : 'Üzgünüm, bu soruya henüz bir cevabım yok.'}</p>`;
           consoleOutput.appendChild(output);
-          fetch(getApiBaseUrl() + '/api/chatbot', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ soru: msg })
-          })
-            .then(r => r.json())
-            .then(data => { output.innerHTML = `<p>${data.cevap}</p>`; setTimeout(() => document.getElementById('terminal-input')?.focus(), 50); })
-            .catch(() => { output.innerHTML = '<p>Bağlantı hatası!</p>'; });
           return;
         } else if (cmd === 'dodge' || cmd === 'matrixgame') {
             startMatrixDodgeGame();
@@ -1298,16 +928,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     scheduleWhiteRabbit();
 
-    // Ortama göre API adresini belirle
-    function getApiBaseUrl() {
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return 'http://localhost:3000';
-      }
-      return 'https://personel-web-site.onrender.com';
-    }
-
-    // Başlangıç animasyonu
-    let lineIndex = 0;
+      // Başlangıç animasyonu
+      let lineIndex = 0;
     function printNextLine() {
         if (lineIndex < contentLines.length) {
             consoleOutput.innerHTML += `<div>${contentLines[lineIndex]}</div>`;
